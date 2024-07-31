@@ -1,9 +1,10 @@
-#include "app_foxhunt.hpp"
+#include "app_fox.hpp"
 
-AppFoxHunt::AppFoxHunt(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {}
+AppFox::AppFox(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {}
 
-void AppFoxHunt::setup() {
-    pinMode(RADIO_gd0, INPUT);
+void AppFox::setup() {
+    pinMode(RADIO_gd0, OUTPUT);
+    digitalWrite(RADIO_gd0, HIGH);
 
     if(radio.setOOK(true) != RADIOLIB_ERR_NONE) {
         Serial.println("error setting OOK");
@@ -17,7 +18,7 @@ void AppFoxHunt::setup() {
         Serial.println("error setting output power");
     }
 
-    if(radio.receiveDirectAsync() != RADIOLIB_ERR_NONE) {
+    if(radio.transmitDirectAsync() != RADIOLIB_ERR_NONE) {
         Serial.println("error setting receive direct async");
     }
     delay(100);
@@ -25,7 +26,7 @@ void AppFoxHunt::setup() {
     Serial.println("radio setup.");
 }
 
-void AppFoxHunt::loop(ButtonStates btn_states) {
+void AppFox::loop(ButtonStates btn_states) {
     if(btn_states.B_FALLING_EDGE) {
         handler->exit_current();
         return;
@@ -82,7 +83,7 @@ void AppFoxHunt::loop(ButtonStates btn_states) {
         if(btn_states.A_FALLING_EDGE) {
             radio.standby();
             radio.setFrequency(frequency);
-            radio.receiveDirectAsync();
+            radio.transmitDirectAsync();
             require_frequency_confirmation = false;
         }
     }
@@ -90,32 +91,25 @@ void AppFoxHunt::loop(ButtonStates btn_states) {
     display->clearDisplay();
 
     display->setTextColor(SSD1306_WHITE);
-    display->setTextSize(3);
+    display->setTextSize(1);
     display->cp437(true);
 
-    float rssi = radiohal::get_RSSI(radio); 
-
     char text_buffer[32];
-    // uint8_t rawRssi = radio.SPIreadRegister(RADIOLIB_CC1101_REG_RSSI);
-    sprintf(text_buffer, "%d", (int) rssi);
-    // sprintf(text_buffer, "RSSI: %d", rawRssi);
     display->setCursor(2, 2);
-    display->write(text_buffer);
     sprintf(text_buffer, "%.3f", frequency);
-    display->setCursor(2, 24);
     display->write(text_buffer);
-
-    display->setTextSize(1);
+    display->setCursor(2, 10);
+    display->write("This app transmits while open!");
 
     if(require_frequency_confirmation) {
-        display->setCursor(2, 46);
+        display->setCursor(2, 20);
         display->write("A to confirm freq");
     }
 
     display->display();
 }
 
-void AppFoxHunt::loop1() {
+void AppFox::loop1() {
     // if(currently_transmitting) return;
     // last_gd0_read = digitalRead(RADIO_gd0);
     // float rssi = radiohal::get_RSSI(radio);
@@ -123,9 +117,18 @@ void AppFoxHunt::loop1() {
     // last_gd0_read = (rssi > -100) ? HIGH : LOW;
 
     // last_rssi = rssi;
+    if(require_frequency_confirmation) {
+        digitalWrite(RADIO_gd0, LOW);
+        return;
+    }
+
+    digitalWrite(RADIO_gd0, HIGH);
+    delayMicroseconds(100);
+    digitalWrite(RADIO_gd0, LOW);
+    delayMicroseconds(100);
 }
 
-void AppFoxHunt::close() {
+void AppFox::close() {
     if(radio.setOutputPower(0) != RADIOLIB_ERR_NONE) {
         Serial.println("error setting output power");
     }

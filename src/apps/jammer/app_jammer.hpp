@@ -3,6 +3,8 @@
 
 #include "app.hpp"
 
+#include "radiohal.hpp"
+
 class AppJammer : public App {
 private:
     const char* name = "JAMMER";

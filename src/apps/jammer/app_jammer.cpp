@@ -42,12 +42,6 @@ void AppJammer::loop(ButtonStates btn_states) {
 
         require_frequency_confirmation = true;
     }
-    if(btn_states.UP || btn_states.UP_FALLING_EDGE) {
-        if(frequency > 348 && frequency < 387) frequency = 387;
-        if(frequency > 464 && frequency < 779) frequency = 779;
-        if(frequency > 928) frequency = 928;
-    }
-
     if(btn_states.DOWN_RISING_EDGE) {
         down_hold_tick = millis();
         frequency-=1;
@@ -59,17 +53,10 @@ void AppJammer::loop(ButtonStates btn_states) {
             down_hold_tick = millis();
         }
 
-        if(frequency < 300) frequency = 300;
-        if(frequency > 348 && frequency < 387) frequency = 348;
-        if(frequency > 464 && frequency < 779) frequency = 464;
-
         require_frequency_confirmation = true;
     }
-    if(btn_states.DOWN || btn_states.DOWN_FALLING_EDGE) {
-        if(frequency < 300) frequency = 300;
-        if(frequency > 348 && frequency < 387) frequency = 348;
-        if(frequency > 464 && frequency < 779) frequency = 464;
-    }
+
+    frequency = radiohal::adjust_frequency(frequency);
 
     if(require_frequency_confirmation) {
         if(btn_states.A_FALLING_EDGE) {

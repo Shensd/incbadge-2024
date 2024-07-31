@@ -83,4 +83,12 @@ namespace radiohal
         }
     }
 
+    float adjust_frequency(float frequency) {
+        if(frequency < 300) frequency = 300;
+        if(frequency > 348 && frequency < 387) frequency = 387;
+        if(frequency > 464 && frequency < 779) frequency = 779;
+        if(frequency > 928) frequency = 928;
+
+        return frequency;
+    }
 }
