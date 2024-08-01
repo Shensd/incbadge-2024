@@ -70,7 +70,7 @@ private:
 
     const uint32_t NEXT_EFFECT_MS = 10000;
     const uint32_t NUM_EFFECTS = 8;
-    int effect_index = 6;
+    int effect_index = 0;
     uint32_t effect_timer = 0;
 
     void loop_dvd_boxes();

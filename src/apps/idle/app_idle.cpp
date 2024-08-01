@@ -440,7 +440,7 @@ void AppIdle::loop(ButtonStates btn_states) {
         loop_matrix_effect();
         break;
     case 1:
-        loop_dvd_boxes();
+        loop_cards();
         break;
     case 2:
         loop_pong();
@@ -458,7 +458,7 @@ void AppIdle::loop(ButtonStates btn_states) {
         loop_tunnel();
         break;
     case 7:
-        loop_cards();
+        loop_dvd_boxes();
         break;
     }
     
