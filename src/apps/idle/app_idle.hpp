@@ -50,9 +50,27 @@ private:
     uint32_t circle_sizes[16] = {0};
     uint32_t tunnel_update_timer = 0;
 
+    /*
+    // static
+    // const uint8_t static_dots_per_row = 6;
+    #define STATIC_DOTS_PER_ROW 6
+    uint32_t static_update_timer = 0;
+    uint32_t static_update_tick_duration = 200;
+    AppIdle_NS::point static_points[STATIC_DOTS_PER_ROW * 3];
+
+    // landscape
+    uint32_t landscape_update_timer = 0;
+    uint32_t landscape_update_tick_duration = 0;
+    uint8_t landscape_point_gap = 4;
+    uint8_t landscape_offset_a = 0;
+    AppIdle_NS::point landscape_hill_points_a[32];
+    uint8_t landscape_offset_b = 0;
+    AppIdle_NS::point landscape_hill_points_b[8];
+    */
+
     const uint32_t NEXT_EFFECT_MS = 10000;
-    const uint32_t NUM_EFFECTS = 7;
-    int effect_index = 1;
+    const uint32_t NUM_EFFECTS = 8;
+    int effect_index = 0;
     uint32_t effect_timer = 0;
 
     void loop_dvd_boxes();
@@ -62,6 +80,9 @@ private:
     void loop_dc_32_scrolling_text();
     void loop_bouncing_ball();
     void loop_tunnel();
+    void loop_static();
+    void loop_landscape();
+    void loop_cards();
 public:
     AppIdle(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler);
 

@@ -4,7 +4,6 @@ AppIdle::AppIdle(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) :
 
 void AppIdle::setup() {
 
-    // effect_index = random(0, NUM_EFFECTS);
     effect_timer = millis();
 
     // dvd logo
@@ -15,9 +14,7 @@ void AppIdle::setup() {
         balls[i].y = random(0, SCREEN_HEIGHT - balls[i].size);
         balls[i].d_x = (random(0,2) == 0 ? -1 : 1) * random(1,3);
         balls[i].d_y = (random(0,2) == 0 ? -1 : 1) * random(1,3);
-        // balls[i].filled = random(0,2) == 0;
         balls[i].filled = i % 2;
-        // balls[i].color = SSD1306_WHITE;
     }
 
     // matrix effect
@@ -50,10 +47,40 @@ void AppIdle::setup() {
     bouncing_ball.d_y = 1;
     bouncing_ball.size = 18;
 
+    // tunnel
     for(int i = 0; i < sizeof(circle_sizes) / sizeof(circle_sizes[0]); i++) {
         circle_sizes[i] = i * 8;
     }
     tunnel_update_timer = millis();
+
+    /*
+    // static lines
+    for(int i = 0; i < sizeof(static_points) / sizeof(static_points[0]); i+=STATIC_DOTS_PER_ROW) {
+        uint32_t point_step = SCREEN_WIDTH / (STATIC_DOTS_PER_ROW - 1);
+
+        for(int j = 0; j < STATIC_DOTS_PER_ROW; j++) {
+            static_points[i+j].x = (j * point_step) + random(-5, 5);
+            static_points[i+j].y = 0;
+        }
+    }
+
+    landscape_hill_points_a[0].x = 0;
+    landscape_hill_points_a[0].y = SCREEN_HEIGHT / 4;
+    // landscape 
+    for(int i = 1; i < sizeof(landscape_hill_points_a) / sizeof(landscape_hill_points_a[0]); i++) {
+        landscape_hill_points_a[i].x = i * landscape_point_gap;
+        landscape_hill_points_a[i].y = landscape_hill_points_a[i-1].y + (random(0, 6) - 3);
+        // landscape_hill_points[i].y = landscape_hill_points[i-1].y + 1;
+    }
+
+    landscape_hill_points_b[0].x = 0;
+    landscape_hill_points_b[0].y = SCREEN_HEIGHT / 2;
+    for(int i = 1; i < sizeof(landscape_hill_points_b) / sizeof(landscape_hill_points_b[0]); i++) {
+        landscape_hill_points_b[i].x = i * (SCREEN_WIDTH / (sizeof(landscape_hill_points_b) / sizeof(landscape_hill_points_b[0])));
+        landscape_hill_points_b[i].y = landscape_hill_points_b[i-1].y + (random(0, 6) - 3);
+        // landscape_hill_points[i].y = landscape_hill_points[i-1].y + 1;
+    }
+    */
 }
 
 void AppIdle::loop_dvd_boxes() {
@@ -93,13 +120,6 @@ void AppIdle::loop_matrix_effect() {
     matrix_last_update = millis();
 
     display->clearDisplay();
-
-    // int index = random(0, sizeof(matrix_lines) / sizeof(matrix_line));
-    // if(matrix_lines[index].y == 0) {
-    //     matrix_lines[index].x = random(0, SCREEN_WIDTH / 8);
-    //     matrix_lines[index].trail_len = random(3, 12);
-    //     matrix_lines[index].y = 8 + matrix_lines[index].trail_len;
-    // }
 
     for(int i = random(0, sizeof(matrix_lines) / sizeof(AppIdle_NS::matrix_line)); i < sizeof(matrix_lines) / sizeof(AppIdle_NS::matrix_line); i++) {
         if(matrix_lines[i].y == 0) {
@@ -189,11 +209,6 @@ void AppIdle::loop_dot_triangle() {
 }
 
 void AppIdle::loop_dc_32_scrolling_text() {
-
-    // if(millis() < scrolling_text_last_update + 60) return;
-
-    // scrolling_text_last_update = millis();
-
     display->clearDisplay();
 
     scrolling_text_offset += scrolling_text_dx;
@@ -258,6 +273,153 @@ void AppIdle::loop_tunnel() {
     display->display();
 }
 
+/*
+void AppIdle::loop_static() {
+
+    if(millis() < static_update_timer + static_update_tick_duration) return;
+
+    static_update_timer = millis();
+
+    display->clearDisplay();
+
+    int rows = sizeof(static_points) / sizeof(static_points[0]) / STATIC_DOTS_PER_ROW;
+    int row_height = SCREEN_HEIGHT / rows;
+
+    for(int i = 0; i < sizeof(static_points) / sizeof(static_points[0]); i++) {
+        static_points[i].y = random(0, SCREEN_HEIGHT);
+    }
+
+    for(int i = 0; i < (sizeof(static_points) / sizeof(static_points[0])) - 1; i++) {
+        if(i > 0 && i % (STATIC_DOTS_PER_ROW - 1) == 0) continue;
+
+        display->drawLine(
+            static_points[i].x,
+            static_points[i].y,
+            static_points[i+1].x,
+            static_points[i+1].y, 
+            SSD1306_WHITE);
+    }
+
+    // for(int i = 0; i < sizeof(static_points) / sizeof(static_points[0]); i+=STATIC_DOTS_PER_ROW) {
+    //     static_points[i+5].y = random((i * row_height) - 2, (i * row_height) + 2);
+    //     for(int j = 0; j < STATIC_DOTS_PER_ROW-1; j++) {
+    //         static_points[i+j].y = random((i * row_height) - 2, (i * row_height) + 2);
+
+    //         display->drawLine(
+    //             static_points[i+j].x,
+    //             static_points[i+j].y,
+    //             static_points[i+j+1].x,
+    //             static_points[i+j+1].y, 
+    //             SSD1306_WHITE);
+    //     }
+    // }
+
+    
+
+    display->display();
+}
+*/
+
+/*
+void AppIdle::loop_landscape() {
+    display->clearDisplay();
+
+    if(millis() < landscape_update_timer + landscape_update_tick_duration) return;
+
+    landscape_update_timer = millis();
+
+    for(int i = 0; i < (sizeof(landscape_hill_points_a) / sizeof(landscape_hill_points_a[0])) - 1; i++) {
+        display->drawLine(
+            landscape_hill_points_a[i].x - landscape_offset_a,
+            landscape_hill_points_a[i].y,
+            landscape_hill_points_a[i+1].x - landscape_offset_a,
+            landscape_hill_points_a[i+1].y,
+            SSD1306_WHITE
+        );
+    }
+
+    int box_w = SCREEN_WIDTH / (sizeof(landscape_hill_points_b) / sizeof(landscape_hill_points_b[0]));
+
+    for(int i = 0; i < (sizeof(landscape_hill_points_b) / sizeof(landscape_hill_points_b[0])) - 1; i++) {
+        display->fillRect(
+            landscape_hill_points_b[i].x - landscape_offset_b - (box_w / 2),
+            landscape_hill_points_b[i].y,
+            box_w,
+            SCREEN_HEIGHT,
+            SSD1306_BLACK
+        );
+        display->drawRect(
+            landscape_hill_points_b[i].x - landscape_offset_b - (box_w / 2),
+            landscape_hill_points_b[i].y,
+            box_w,
+            SCREEN_HEIGHT,
+            SSD1306_WHITE
+        );
+    }
+
+    landscape_offset_a++;
+
+    if(landscape_offset_a > landscape_point_gap) {
+        for(int i = 0; i < (sizeof(landscape_hill_points_a) / sizeof(landscape_hill_points_a[0])) - 1; i++) {
+            landscape_hill_points_a[i].y = landscape_hill_points_a[i+1].y;
+        }
+
+        int last = (sizeof(landscape_hill_points_a) / sizeof(landscape_hill_points_a[0])) - 1;
+
+        landscape_hill_points_a[last].y = landscape_hill_points_a[last-1].y + (random(0, 6) - 3);
+
+        if(landscape_hill_points_a[last].y < 8) landscape_hill_points_a[last].y += random(10, 20);
+        if(landscape_hill_points_a[last].y > SCREEN_HEIGHT / 2) landscape_hill_points_a[last].y -= random(10, 20);
+
+        landscape_offset_a = 1;
+
+        landscape_offset_b++;
+    }
+
+    if(landscape_offset_b > (SCREEN_WIDTH / (sizeof(landscape_hill_points_b) / sizeof(landscape_hill_points_b[0])))) {
+        for(int i = 0; i < (sizeof(landscape_hill_points_b) / sizeof(landscape_hill_points_b[0])) - 1; i++) {
+            landscape_hill_points_b[i].y = landscape_hill_points_b[i+1].y;
+        }
+
+        int last = (sizeof(landscape_hill_points_b) / sizeof(landscape_hill_points_b[0])) - 1;
+
+        landscape_hill_points_b[last].y = landscape_hill_points_b[last-1].y + (random(0, 6) - 3);
+
+        if(landscape_hill_points_b[last].y < 32) landscape_hill_points_b[last].y += random(10, 20);
+        if(landscape_hill_points_b[last].y > SCREEN_HEIGHT - 4) landscape_hill_points_b[last].y -= random(10, 20);
+
+        landscape_offset_b = 1;
+    }
+
+    display->display();
+}
+*/
+
+void AppIdle::loop_cards() {
+    int8_t x = random(-32, SCREEN_WIDTH), y = random(-32, SCREEN_HEIGHT);
+
+    display->fillRect(
+        x, 
+        y, 
+        16, 
+        32, 
+        SSD1306_BLACK
+    );
+    display->drawRect(
+        x, 
+        y, 
+        16, 
+        32, 
+        SSD1306_WHITE
+    );
+    display->setTextSize(1);
+    display->setTextColor(SSD1306_WHITE);
+    display->setCursor(x+6, y+12);
+    display->write(random(0x03, 0x07));
+
+    display->display();
+}
+
 void AppIdle::loop(ButtonStates btn_states) {
     if(
         btn_states.UP_FALLING_EDGE || btn_states.DOWN_FALLING_EDGE || btn_states.LEFT_FALLING_EDGE || 
@@ -268,13 +430,6 @@ void AppIdle::loop(ButtonStates btn_states) {
 
     if(millis() > effect_timer + NEXT_EFFECT_MS) {
         effect_timer = millis();
-        // while(true) {
-        //     int next_effect_index = random(0, NUM_EFFECTS);
-        //     if(next_effect_index != effect_index) {
-        //         effect_index = next_effect_index;
-        //         break;
-        //     }
-        // }
         effect_index++;
 
         if(effect_index >= NUM_EFFECTS) effect_index = 0;
@@ -285,7 +440,7 @@ void AppIdle::loop(ButtonStates btn_states) {
         loop_matrix_effect();
         break;
     case 1:
-        loop_dvd_boxes();
+        loop_cards();
         break;
     case 2:
         loop_pong();
@@ -301,6 +456,9 @@ void AppIdle::loop(ButtonStates btn_states) {
         break;
     case 6:
         loop_tunnel();
+        break;
+    case 7:
+        loop_dvd_boxes();
         break;
     }
     

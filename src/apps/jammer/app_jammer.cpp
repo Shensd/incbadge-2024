@@ -23,92 +23,179 @@ void AppJammer::setup() {
     }
 }
 
+void AppJammer::loop_configuration(ButtonStates btn_states) {
+
+    // exit and save, make sure you make the actual config changes here!
+    if(btn_states.A_FALLING_EDGE) {
+        in_configuration_loop = false;
+        
+        frequency = temp_frequency;
+
+        radio.standby();
+
+        if(radio.setFrequency(frequency) != RADIOLIB_ERR_NONE) {
+            Serial.println("error setting frequency");
+        }
+
+        radio.transmitDirectAsync();
+
+        return;
+    }
+    // exit without saving
+    if(btn_states.B_FALLING_EDGE) {
+        in_configuration_loop = false;
+        radio.receiveDirectAsync();
+        return;
+    }
+    
+    // choose which configuration option to configure
+    if(btn_states.UP_FALLING_EDGE) {
+        current_configuration_option--;
+        if(current_configuration_option < 0) current_configuration_option = configuration_options - 1;
+        return;
+    }
+    if(btn_states.DOWN_FALLING_EDGE) {
+        current_configuration_option = (current_configuration_option + 1) % configuration_options;
+        return;
+    }
+
+    // for frequency
+    float small_freq_step = 0.025;
+    float medium_freq_step = 1;
+    float large_freq_step = 10;
+
+    // step delay ms
+    uint32_t medium_step_delay = 250;
+    uint32_t large_step_delay = 2000;
+
+    // should be used in order from large to small
+    bool do_right_small_step = false, do_right_medium_step = false, do_right_large_step = false;
+    bool do_left_small_step = false, do_left_medium_step = false, do_left_large_step = false;
+
+    // this mess of if statements is to keep track of how long the buttons have been pressed
+    // and decides how large of a step can be taken accordingly
+
+    if(btn_states.RIGHT_RISING_EDGE) {
+        right_hold_tick = millis();
+        right_initial_hold = millis();
+    }
+    // don't do small step if they release after holding -- very annoying otherwise!
+    if(btn_states.RIGHT_FALLING_EDGE && millis() < right_initial_hold + medium_step_delay) {
+        do_right_small_step = true;
+    }
+    if(btn_states.RIGHT) {
+        // if time after last tick is greater than medium step requirement, do medium step
+        if(millis() > right_hold_tick + medium_step_delay) {
+            do_right_medium_step = true;
+            if(millis() > right_initial_hold + large_step_delay) do_right_large_step = true;
+
+            right_hold_tick = millis();
+        }
+    }
+    if(btn_states.LEFT_RISING_EDGE) {
+        left_hold_tick = millis();
+        left_initial_hold = millis();
+    }
+    // don't do small step if they release after holding -- very annoying otherwise!
+    if(btn_states.LEFT_FALLING_EDGE && millis() < left_initial_hold + medium_step_delay) {
+        do_left_small_step = true;
+    }
+    if(btn_states.LEFT) {
+        // if time after last tick is greater than medium step requirement, do medium step
+        if(millis() > left_hold_tick + medium_step_delay) {
+            do_left_medium_step = true;
+            if(millis() > left_initial_hold + large_step_delay) do_left_large_step = true;
+
+            left_hold_tick = millis();
+        }
+    }
+
+    switch(current_configuration_option) {
+    case 0: // frequency
+        if(do_right_large_step) temp_frequency += large_freq_step;
+        else if(do_right_medium_step) temp_frequency += medium_freq_step;
+        else if(do_right_small_step) temp_frequency += small_freq_step;
+        else if(do_left_large_step) temp_frequency -= large_freq_step;
+        else if(do_left_medium_step) temp_frequency -= medium_freq_step;
+        else if(do_left_small_step) temp_frequency -= small_freq_step;
+
+        temp_frequency = radiohal::adjust_frequency(temp_frequency);
+
+        break;
+    default:    
+        break;
+    }
+
+    display->clearDisplay();
+
+    display->setTextColor(SSD1306_WHITE);
+    display->setTextSize(1);
+    display->cp437(true);
+
+    char text_buffer[32];
+
+    display->setCursor(2, 2);
+    display->write("A=set B=cancel");
+
+    if(current_configuration_option == 0) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
+    sprintf(text_buffer, "FREQ %.3f", temp_frequency);
+    display->setCursor(2, 10);
+    display->write(text_buffer);
+
+    display->display();
+}
+
 void AppJammer::loop(ButtonStates btn_states) {
+    if(in_configuration_loop) {
+        loop_configuration(btn_states);
+        return;
+    }
+
     if(btn_states.B_FALLING_EDGE) {
         handler->exit_current();
         return;
     }
 
-    if(btn_states.UP_RISING_EDGE) {
-        up_hold_tick = millis();
-        frequency+=1;
-        require_frequency_confirmation = true;
-    }
-    if(btn_states.UP) {
-        if(millis() > up_hold_tick + 500) {
-            frequency+=10;
-            up_hold_tick = millis();
-        }
+    if(btn_states.A_FALLING_EDGE) {
+        in_configuration_loop = true;
 
-        require_frequency_confirmation = true;
-    }
-    if(btn_states.UP || btn_states.UP_FALLING_EDGE) {
-        if(frequency > 348 && frequency < 387) frequency = 387;
-        if(frequency > 464 && frequency < 779) frequency = 779;
-        if(frequency > 928) frequency = 928;
+        radio.standby();
+
+        temp_frequency = frequency;
+
+        return;
     }
 
-    if(btn_states.DOWN_RISING_EDGE) {
-        down_hold_tick = millis();
-        frequency-=1;
-        require_frequency_confirmation = true;
-    }
-    if(btn_states.DOWN) {
-        if(millis() > down_hold_tick + 500) {
-            frequency-=10;
-            down_hold_tick = millis();
-        }
-
-        if(frequency < 300) frequency = 300;
-        if(frequency > 348 && frequency < 387) frequency = 348;
-        if(frequency > 464 && frequency < 779) frequency = 464;
-
-        require_frequency_confirmation = true;
-    }
-    if(btn_states.DOWN || btn_states.DOWN_FALLING_EDGE) {
-        if(frequency < 300) frequency = 300;
-        if(frequency > 348 && frequency < 387) frequency = 348;
-        if(frequency > 464 && frequency < 779) frequency = 464;
-    }
-
-    if(require_frequency_confirmation) {
-        if(btn_states.A_FALLING_EDGE) {
-            radio.finishTransmit();
-            radio.setFrequency(frequency);
-            radio.transmitDirectAsync();
-            require_frequency_confirmation = false;
-        }
-    }
-
-    if(!require_frequency_confirmation) {
-        do_jamming = btn_states.A;
-    }
+    do_jamming = btn_states.UP || btn_states.DOWN || btn_states.LEFT || btn_states.RIGHT;
 
     display->clearDisplay();
 
-    char text_buffer[32];
-    sprintf(text_buffer, "FREQ: %.2fMHz", frequency);
-    display->setTextColor(SSD1306_WHITE);
+    if(do_jamming) {
+        display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+        display->fillScreen(SSD1306_WHITE);
+    } else {
+        display->setTextColor(SSD1306_WHITE);
+    }
+
     display->setTextSize(1);
     display->cp437(true);
+    
+    if(do_jamming) {
+        for(int i = 0; i < 16; i++) {
+            display->drawRect(random(0, SCREEN_WIDTH - 16), random(0, SCREEN_HEIGHT - 16), 16, 16, SSD1306_BLACK);
+        }
+    }
+
+    char text_buffer[32];
+    sprintf(text_buffer, "FREQ: %.3fMHz", frequency);
     display->setCursor(2, 2);
     display->write(text_buffer);
-    
     display->setCursor(2, 10);
-    if(require_frequency_confirmation) {
-        display->write("press A to confirm");
-    } else {
-        display->write("hold A to jam!");
-    }
-
-    if(do_jamming) {
-        display->setCursor(2, 18);
-        display->write("jamming!");
-
-        jam_square_x = random(0, SCREEN_WIDTH);
-        jam_square_y = random(0, SCREEN_HEIGHT);
-        display->drawRect(jam_square_x, jam_square_y, 16, 16, SSD1306_WHITE);
-    }
+    display->write("hold any directional");
+    display->setCursor(2, 20);
+    display->write("to transmit!");
     
     display->display();
 }
@@ -131,5 +218,9 @@ void AppJammer::close() {
 
     if(radio.finishTransmit() != RADIOLIB_ERR_NONE) {
         Serial.println("error putting radio to standby");
+    }
+
+    if(radio.standby() != RADIOLIB_ERR_NONE) {
+        Serial.println("error putting radio in standby");
     }
 }

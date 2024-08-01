@@ -23,6 +23,8 @@ uint16_t set_config_from_string(CC1101 radio, char* config_str);
 
 float get_RSSI(CC1101 radio);
 
+float adjust_frequency(float frequency);
+
 }
 
 #endif // !RADIOHAL_HPP

@@ -1,5 +1,5 @@
-#ifndef APP_FOXHUNT_HPP
-#define APP_FOXHUNT_HPP /*** DONT FORGET TO CHANGE INCLUDE GUARDS ***/
+#ifndef APP_FOX_HPP
+#define APP_FOX_HPP /*** DONT FORGET TO CHANGE INCLUDE GUARDS ***/
 
 #include <RadioLib.h>
 
@@ -8,9 +8,9 @@
 #include "app.hpp"
 
 
-class AppFoxHunt : public App {
+class AppFox : public App {
 private:
-    const char* name = "FOXHUNT";
+    const char* name = "FOX";
     const uint8_t CONFIG_ASK = 0;
     const uint8_t CONFIG_FSK = 1;
 
@@ -27,32 +27,23 @@ private:
 
     bool require_frequency_confirmation = false;
 
-    float previous_rssi_readings[128];
-    uint32_t rssi_reading_frequency_ms = 50;
-    uint32_t last_rssi_reading = 0;
-    uint8_t rssi_reading_index = 0;
+    uint32_t transmit_timer = 0;
+    int32_t transmit_delay_ms = 30000; // 30 seconds
+    int32_t transmit_duration_ms = 10000; // 10 seconds
 
-    long rssi_upper_bound = -20;
-    long rssi_lower_bound = -110;
-
-
-    // configuration loop vars
     bool in_configuration_loop = false;
 
     int8_t configuration_options = 4;
     int8_t current_configuration_option = 0;
 
     float temp_frequency = 0;
-    long temp_rssi_upper_bound = 0;
-    long temp_rssi_lower_bound = 0;
-
-
+    int32_t temp_transmit_delay_ms = 0;
+    int32_t temp_transmit_duration_ms = 0;
     uint8_t temp_modulation = CONFIG_ASK;
 
     void loop_configuration(ButtonStates btn_states);
-
 public:
-    AppFoxHunt(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler);
+    AppFox(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler);
 
     void setup() override;
     void loop(ButtonStates btn_states) override;
@@ -62,4 +53,4 @@ public:
     const char* get_name() override { return name; }
 };
 
-#endif // !APP_FOXHUNT_HPP
+#endif // !APP_FOX_HPP

@@ -16,6 +16,8 @@
 #include "apps/jammer/app_jammer.hpp"
 #include "apps/foxhunt/app_foxhunt.hpp"
 #include "apps/pixelpainter/app_pixelpainter.hpp"
+#include "apps/fox/app_fox.hpp"
+#include "apps/readme/app_readme.hpp"
 
 pin_size_t button_pins[] = {BTN_PIN_UP, BTN_PIN_DOWN, BTN_PIN_LEFT, BTN_PIN_RIGHT, BTN_PIN_A, BTN_PIN_B};
 
@@ -69,10 +71,12 @@ void setup() {
     handler = new AppHandler(display);
 
     handler->add_app(new AppIdle(radio, display, handler));
-    handler->add_app(new AppMorse(radio, display, handler));
+    handler->add_app(new AppReadme(radio, display, handler));
+    // handler->add_app(new AppMorse(radio, display, handler));
     handler->add_app(new AppJammer(radio, display, handler));
     handler->add_app(new AppFoxHunt(radio, display, handler));
     handler->add_app(new AppPixelPainter(radio, display, handler));
+    handler->add_app(new AppFox(radio, display, handler));
 
     handler->start_app_by_index(0); // load idle animation
 }

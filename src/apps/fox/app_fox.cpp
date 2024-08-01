@@ -1,19 +1,13 @@
-#include "app_foxhunt.hpp"
+#include "app_fox.hpp"
 
-AppFoxHunt::AppFoxHunt(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {}
+AppFox::AppFox(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {}
 
-void AppFoxHunt::setup() {
-    pinMode(RADIO_gd0, INPUT);
+void AppFox::setup() {
+    pinMode(RADIO_gd0, OUTPUT);
+    digitalWrite(RADIO_gd0, HIGH);
 
-    if(modulation == CONFIG_ASK) {
-        if(radio.setOOK(true) != RADIOLIB_ERR_NONE) {
-            Serial.println("error setting OOK");
-        }
-    }
-    if(modulation == CONFIG_FSK) {
-        if(radio.setOOK(false) != RADIOLIB_ERR_NONE) {
-            Serial.println("error setting ASK (setOOK(false))");
-        }
+    if(radio.setOOK(true) != RADIOLIB_ERR_NONE) {
+        Serial.println("error setting OOK");
     }
 
     if(radio.setFrequency(frequency) != RADIOLIB_ERR_NONE) {
@@ -24,27 +18,21 @@ void AppFoxHunt::setup() {
         Serial.println("error setting output power");
     }
 
-    if(radio.receiveDirectAsync() != RADIOLIB_ERR_NONE) {
+    if(radio.transmitDirectAsync() != RADIOLIB_ERR_NONE) {
         Serial.println("error setting receive direct async");
     }
     delay(100);
-
-    // clear out rssi reading array
-    uint8_t rssi_reading_array_len = (sizeof(previous_rssi_readings) / sizeof(previous_rssi_readings[0]));
-    for(uint8_t i = 0; i < rssi_reading_array_len; i++) {
-        previous_rssi_readings[i] = rssi_lower_bound;
-    }
 }
 
-void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
+void AppFox::loop_configuration(ButtonStates btn_states) {
 
     // exit and save, make sure you make the actual config changes here!
     if(btn_states.A_FALLING_EDGE) {
         in_configuration_loop = false;
         
         frequency = temp_frequency;
-        rssi_upper_bound = temp_rssi_upper_bound;
-        rssi_lower_bound = temp_rssi_lower_bound;
+        transmit_delay_ms = temp_transmit_delay_ms;
+        transmit_duration_ms = temp_transmit_duration_ms;
         modulation = temp_modulation;
 
         radio.standby();
@@ -64,7 +52,7 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
             }
         }
 
-        radio.receiveDirectAsync();
+        radio.transmitDirectAsync();
 
         return;
     }
@@ -92,8 +80,8 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
     float large_freq_step = 10;
 
     // step delay ms
-    float medium_step_delay = 250;
-    float large_step_delay = 2000;
+    uint32_t medium_step_delay = 250;
+    uint32_t large_step_delay = 2000;
 
     // should be used in order from large to small
     bool do_right_small_step = false, do_right_medium_step = false, do_right_large_step = false;
@@ -101,6 +89,7 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
 
     // this mess of if statements is to keep track of how long the buttons have been pressed
     // and decides how large of a step can be taken accordingly
+
     if(btn_states.RIGHT_RISING_EDGE) {
         right_hold_tick = millis();
         right_initial_hold = millis();
@@ -148,18 +137,26 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
         temp_frequency = radiohal::adjust_frequency(temp_frequency);
 
         break;
-    case 1: // rssi lower bound
-        if(do_right_medium_step) temp_rssi_lower_bound += 10;
-        else if(do_right_small_step) temp_rssi_lower_bound += 1;
-        else if(do_left_medium_step) temp_rssi_lower_bound -= 10;
-        else if(do_left_small_step) temp_rssi_lower_bound -= 1;
+    case 1:
+        if(do_right_large_step) temp_transmit_delay_ms += 10000;
+        else if(do_right_medium_step) temp_transmit_delay_ms += 1000;
+        else if(do_right_small_step) temp_transmit_delay_ms += 1000;
+        else if(do_left_large_step) temp_transmit_delay_ms -= 10000;
+        else if(do_left_medium_step) temp_transmit_delay_ms -= 1000;
+        else if(do_left_small_step) temp_transmit_delay_ms -= 1000;
+
+        if(temp_transmit_delay_ms < 0) temp_transmit_delay_ms = 0;
 
         break;
-    case 2: // rssi upper bound
-        if(do_right_medium_step) temp_rssi_upper_bound += 10;
-        else if(do_right_small_step) temp_rssi_upper_bound += 1;
-        else if(do_left_medium_step) temp_rssi_upper_bound -= 10;
-        else if(do_left_small_step) temp_rssi_upper_bound -= 1;
+    case 2:
+        if(do_right_large_step) temp_transmit_duration_ms += 10000;
+        else if(do_right_medium_step) temp_transmit_duration_ms += 1000;
+        else if(do_right_small_step) temp_transmit_duration_ms += 1000;
+        else if(do_left_large_step) temp_transmit_duration_ms -= 10000;
+        else if(do_left_medium_step) temp_transmit_duration_ms -= 1000;
+        else if(do_left_small_step) temp_transmit_duration_ms -= 1000;
+
+        if(temp_transmit_duration_ms < 0) temp_transmit_duration_ms = 0;
 
         break;
     case 3: // ASK or FSK
@@ -192,14 +189,14 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
     if(current_configuration_option == 1) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
-    sprintf(text_buffer, "RSSI LOW %d", temp_rssi_lower_bound);
+    sprintf(text_buffer, "TX GAP %d", temp_transmit_delay_ms / 1000);
     display->setCursor(2, 20);
     display->write(text_buffer);
 
     if(current_configuration_option == 2) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
-    sprintf(text_buffer, "RSSI HI %d", temp_rssi_upper_bound);
+    sprintf(text_buffer, "TX DURATION %d", temp_transmit_duration_ms / 1000);
     display->setCursor(2, 30);
     display->write(text_buffer);
 
@@ -213,7 +210,7 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
     display->display();
 }
 
-void AppFoxHunt::loop(ButtonStates btn_states) {
+void AppFox::loop(ButtonStates btn_states) {
     if(in_configuration_loop) {
         loop_configuration(btn_states);
         return;
@@ -230,76 +227,73 @@ void AppFoxHunt::loop(ButtonStates btn_states) {
         radio.standby();
 
         temp_frequency = frequency;
-        temp_rssi_upper_bound = rssi_upper_bound;
-        temp_rssi_lower_bound = rssi_lower_bound;
+        temp_transmit_delay_ms = transmit_delay_ms;
+        temp_transmit_duration_ms = transmit_duration_ms;
+        temp_modulation = modulation;
 
         return;
     }
 
     display->clearDisplay();
 
-    display->setTextColor(SSD1306_WHITE);
+    if(millis() > transmit_timer + transmit_delay_ms &&
+        millis() < transmit_timer + transmit_delay_ms + transmit_duration_ms &&
+        !require_frequency_confirmation) 
+    {
+        display->fillScreen(SSD1306_WHITE);
+        display->setTextColor(SSD1306_BLACK);
+
+        display->setCursor(2, 30);
+        display->write("transmitting!");
+    } else {
+        display->setTextColor(SSD1306_WHITE);
+    }
+
     display->setTextSize(1);
     display->cp437(true);
 
-    float rssi = radiohal::get_RSSI(radio); 
-
-    uint8_t rssi_reading_array_len = (sizeof(previous_rssi_readings) / sizeof(previous_rssi_readings[0]));
-
-    if(millis() > last_rssi_reading + rssi_reading_frequency_ms) {
-        float adjusted_rssi = rssi;
-
-        if(rssi < rssi_lower_bound) adjusted_rssi = rssi_lower_bound;
-        if(rssi > rssi_upper_bound) adjusted_rssi = rssi_upper_bound;
-
-        previous_rssi_readings[rssi_reading_index] = rssi;
-        rssi_reading_index = (rssi_reading_index + 1) % rssi_reading_array_len;
-
-        last_rssi_reading = millis();
-    }
-
     char text_buffer[32];
-    // uint8_t rawRssi = radio.SPIreadRegister(RADIOLIB_CC1101_REG_RSSI);
-    sprintf(text_buffer, "%s, RSSI %d", modulation == CONFIG_ASK ? "ASK" : "FSK", (int) rssi);
-    // sprintf(text_buffer, "RSSI: %d", rawRssi);
     display->setCursor(2, 2);
+    sprintf(text_buffer, "%s %.3fMHz", modulation == CONFIG_ASK ? "ASK" : "FSK", frequency);
     display->write(text_buffer);
-    sprintf(text_buffer, "%.3fMHz", frequency);
     display->setCursor(2, 10);
+    sprintf(text_buffer, "gap duration: %ds", transmit_delay_ms / 1000);
     display->write(text_buffer);
+    display->setCursor(2, 20);
+    sprintf(text_buffer, "tx duration: %ds", transmit_duration_ms / 1000);
+    display->write(text_buffer);
+    // display->write("This app transmits while open!");
 
     if(require_frequency_confirmation) {
-        display->setCursor(2, 20);
+        display->setCursor(2, 30);
         display->write("A to confirm freq");
-    } else {
-        sprintf(text_buffer, "%d", rssi_upper_bound);
-        display->setCursor(2, 20);
-        display->write(text_buffer);
-        sprintf(text_buffer, "%d", rssi_lower_bound);
-        display->setCursor(2, 64 - 8);
-        display->write(text_buffer);
-
-        for(uint8_t i = 0; i < rssi_reading_array_len; i++) {
-            uint32_t height = map((long) previous_rssi_readings[i], rssi_lower_bound, rssi_upper_bound, 0, 48);
-
-            display->fillRect(
-                i * (SCREEN_WIDTH / rssi_reading_array_len),
-                SCREEN_HEIGHT - height,
-                (SCREEN_WIDTH / rssi_reading_array_len),
-                SCREEN_HEIGHT,
-                SSD1306_WHITE
-            );
-        }
     }
 
     display->display();
 }
 
-void AppFoxHunt::loop1() {
+void AppFox::loop1() {
 
+    if(millis() < transmit_timer + transmit_delay_ms) {
+        return;
+    }
+
+    if(in_configuration_loop) {
+        digitalWrite(RADIO_gd0, LOW);
+        return;
+    }
+
+    digitalWrite(RADIO_gd0, HIGH);
+    delayMicroseconds(100);
+    digitalWrite(RADIO_gd0, LOW);
+    delayMicroseconds(100);
+
+    if(millis() > transmit_timer + transmit_delay_ms + transmit_duration_ms) {
+        transmit_timer = millis();
+    }
 }
 
-void AppFoxHunt::close() {
+void AppFox::close() {
     if(radio.standby() != RADIOLIB_ERR_NONE) {
         Serial.println("error putting radio in standby");
     }
