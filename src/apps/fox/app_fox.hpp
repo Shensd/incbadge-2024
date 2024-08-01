@@ -28,8 +28,8 @@ private:
     bool require_frequency_confirmation = false;
 
     uint32_t transmit_timer = 0;
-    uint32_t transmit_delay_ms = 30000; // 30 seconds
-    uint32_t transmit_duration_ms = 10000; // 10 seconds
+    int32_t transmit_delay_ms = 30000; // 30 seconds
+    int32_t transmit_duration_ms = 10000; // 10 seconds
 
     bool in_configuration_loop = false;
 
@@ -37,8 +37,8 @@ private:
     int8_t current_configuration_option = 0;
 
     float temp_frequency = 0;
-    uint32_t temp_transmit_delay_ms = 0;
-    uint32_t temp_transmit_duration_ms = 0;
+    int32_t temp_transmit_delay_ms = 0;
+    int32_t temp_transmit_duration_ms = 0;
     uint8_t temp_modulation = CONFIG_ASK;
 
     void loop_configuration(ButtonStates btn_states);

@@ -34,8 +34,6 @@ void AppFoxHunt::setup() {
     for(uint8_t i = 0; i < rssi_reading_array_len; i++) {
         previous_rssi_readings[i] = rssi_lower_bound;
     }
-
-    Serial.println("radio setup.");
 }
 
 void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
@@ -302,9 +300,7 @@ void AppFoxHunt::loop1() {
 }
 
 void AppFoxHunt::close() {
-    if(radio.setOutputPower(0) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting output power");
+    if(radio.standby() != RADIOLIB_ERR_NONE) {
+        Serial.println("error putting radio in standby");
     }
-
-    radio.standby();
 }

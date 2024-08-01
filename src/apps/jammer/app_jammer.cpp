@@ -219,4 +219,8 @@ void AppJammer::close() {
     if(radio.finishTransmit() != RADIOLIB_ERR_NONE) {
         Serial.println("error putting radio to standby");
     }
+
+    if(radio.standby() != RADIOLIB_ERR_NONE) {
+        Serial.println("error putting radio in standby");
+    }
 }

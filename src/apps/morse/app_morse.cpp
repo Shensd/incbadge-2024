@@ -152,10 +152,8 @@ void AppMorse::loop1() {
     // last_rssi = rssi;
 }
 
-void AppMorse::close() {
-    if(radio.setOutputPower(0) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting output power");
+void AppMorse::close() {    
+    if(radio.standby() != RADIOLIB_ERR_NONE) {
+        Serial.println("error putting radio in standby");
     }
-
-    radio.standby();
 }

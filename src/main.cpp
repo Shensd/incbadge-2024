@@ -71,7 +71,7 @@ void setup() {
 
     handler->add_app(new AppIdle(radio, display, handler));
     handler->add_app(new AppReadme(radio, display, handler));
-    handler->add_app(new AppMorse(radio, display, handler));
+    // handler->add_app(new AppMorse(radio, display, handler));
     handler->add_app(new AppJammer(radio, display, handler));
     handler->add_app(new AppFoxHunt(radio, display, handler));
     handler->add_app(new AppFox(radio, display, handler));

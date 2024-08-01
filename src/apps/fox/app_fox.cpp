@@ -22,8 +22,6 @@ void AppFox::setup() {
         Serial.println("error setting receive direct async");
     }
     delay(100);
-
-    Serial.println("radio setup.");
 }
 
 void AppFox::loop_configuration(ButtonStates btn_states) {
@@ -296,9 +294,7 @@ void AppFox::loop1() {
 }
 
 void AppFox::close() {
-    if(radio.setOutputPower(0) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting output power");
+    if(radio.standby() != RADIOLIB_ERR_NONE) {
+        Serial.println("error putting radio in standby");
     }
-
-    radio.standby();
 }
