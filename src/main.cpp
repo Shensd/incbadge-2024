@@ -15,6 +15,7 @@
 #include "apps/morse/app_morse.hpp"
 #include "apps/jammer/app_jammer.hpp"
 #include "apps/foxhunt/app_foxhunt.hpp"
+#include "apps/pixelpainter/app_pixelpainter.hpp"
 
 pin_size_t button_pins[] = {BTN_PIN_UP, BTN_PIN_DOWN, BTN_PIN_LEFT, BTN_PIN_RIGHT, BTN_PIN_A, BTN_PIN_B};
 
@@ -71,6 +72,7 @@ void setup() {
     handler->add_app(new AppMorse(radio, display, handler));
     handler->add_app(new AppJammer(radio, display, handler));
     handler->add_app(new AppFoxHunt(radio, display, handler));
+    handler->add_app(new AppPixelPainter(radio, display, handler));
 
     handler->start_app_by_index(0); // load idle animation
 }
