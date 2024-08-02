@@ -1,11 +1,17 @@
 #include "app.hpp"
 
-AppHandler::AppHandler(Adafruit_SSD1306 *display) : display(display) {}
+AppHandler::AppHandler(Adafruit_SSD1306 *display, CC1101 radio) : display(display), radio(radio) {}
 
 void AppHandler::exit_current() {
     if(current_app == NULL) return;
 
     current_app->close();
+
+    // make sure radio is always powered down when an app is closed,
+    // since it's the most power hungry componenet
+    radio.finishTransmit();
+    radio.packetMode();
+    radio.standby();
 
     current_app = NULL;
 }

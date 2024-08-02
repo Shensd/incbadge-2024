@@ -35,6 +35,7 @@ public:
 
 class AppHandler {
 private:
+    CC1101 radio;
     Adafruit_SSD1306 *display;
     App* apps[MAX_APPS];
     uint32_t num_apps = 0;
@@ -44,7 +45,7 @@ private:
 
     int32_t ui_selected_app = 0;
 public:
-    AppHandler(Adafruit_SSD1306 *display);
+    AppHandler(Adafruit_SSD1306 *display, CC1101 radio);
 
     void add_app(App* app) {
         if(num_apps < MAX_APPS) {

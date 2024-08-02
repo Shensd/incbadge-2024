@@ -3,8 +3,8 @@
 namespace radiohal
 {
 
-    uint16_t load_config(CC1101 radio, const uint8_t *config) {
-        uint16_t status = 0;
+    int16_t load_config(CC1101 radio, const uint8_t *config) {
+        int16_t status = 0;
         int i = 0;
         while (config[i] != 0)
         {
@@ -29,26 +29,26 @@ namespace radiohal
     }
 
     // On/Off Keying, 270kHz bandwidth, async(IO throw GP0)
-    uint16_t config_FuriHalSubGhzPresetOok270Async(CC1101 radio) {
+    int16_t config_FuriHalSubGhzPresetOok270Async(CC1101 radio) {
         return load_config(radio, subghz_device_cc1101_preset_ook_270khz_async_regs);
     }
 
     // On/Off Keying, 650kHz bandwidth, async(IO throw GP0)
-    uint16_t config_FuriHalSubGhzPresetOok650Async(CC1101 radio) {
+    int16_t config_FuriHalSubGhzPresetOok650Async(CC1101 radio) {
         return load_config(radio, subghz_device_cc1101_preset_ook_650khz_async_regs);
     }
 
     // 2 Frequency Shift Keying, deviation 2kHz, 270kHz bandwidth, async(IO throw GP0)
-    uint16_t config_FuriHalSubGhzPreset2FSKDev238Async(CC1101 radio) {
+    int16_t config_FuriHalSubGhzPreset2FSKDev238Async(CC1101 radio) {
         return load_config(radio, subghz_device_cc1101_preset_2fsk_dev2_38khz_async_regs);
     }
 
     // 2 Frequency Shift Keying, deviation 47kHz, 270kHz bandwidth, async(IO throw GP0)
-    uint16_t config_FuriHalSubGhzPreset2FSKDev476Async(CC1101 radio) {
+    int16_t config_FuriHalSubGhzPreset2FSKDev476Async(CC1101 radio) {
         return load_config(radio, subghz_device_cc1101_preset_2fsk_dev47_6khz_async_regs);
     }
 
-    uint16_t set_config_from_string(CC1101 radio, char *config_str) {
+    int16_t set_config_from_string(CC1101 radio, char *config_str) {
         if (strcmp(config_str, "FuriHalSubGhzPresetOok270Async") == 0)
         {
             return config_FuriHalSubGhzPresetOok270Async(radio);

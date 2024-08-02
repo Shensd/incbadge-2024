@@ -18,6 +18,7 @@
 #include "apps/pixelpainter/app_pixelpainter.hpp"
 #include "apps/fox/app_fox.hpp"
 #include "apps/readme/app_readme.hpp"
+#include "apps/replay/app_replay.hpp"
 
 pin_size_t button_pins[] = {BTN_PIN_UP, BTN_PIN_DOWN, BTN_PIN_LEFT, BTN_PIN_RIGHT, BTN_PIN_A, BTN_PIN_B};
 
@@ -68,7 +69,7 @@ void setup() {
         for(;;);
     }
 
-    handler = new AppHandler(display);
+    handler = new AppHandler(display, radio);
 
     handler->add_app(new AppIdle(radio, display, handler));
     handler->add_app(new AppReadme(radio, display, handler));
@@ -77,6 +78,7 @@ void setup() {
     handler->add_app(new AppFoxHunt(radio, display, handler));
     handler->add_app(new AppPixelPainter(radio, display, handler));
     handler->add_app(new AppFox(radio, display, handler));
+    handler->add_app(new AppReplay(radio, display, handler));
 
     handler->start_app_by_index(0); // load idle animation
 }
