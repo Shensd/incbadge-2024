@@ -15,6 +15,26 @@ void AppHandler::exit_current() {
 
     current_app = NULL;
 }
+
+// inline uint8_t dist_from_pixel(int8_t x0, int8_t y0, int8_t x1, int8_t y1) {
+//     return sqrt((abs(x1 - x0) * abs(x1 - x0)) + (abs(y1 - y0) * abs(y1 - y0)));
+// }
+
+void AppHandler::draw_bouncing_cube() {
+    cube_x += cube_dx;
+    cube_y += cube_dy;
+
+    if(cube_x < 0 || cube_x > SCREEN_WIDTH - cube_w) cube_dx = -cube_dx;
+    if(cube_y < 0 || cube_y > SCREEN_HEIGHT - cube_h) cube_dy = -cube_dy;
+
+    for(int x = cube_x; x < cube_x + cube_w; x++) {
+        for(int y = cube_y; y < cube_y + cube_h; y++) {
+            // if(dist_from_pixel(x - cube_x, y - cube_y, 8, 8) < circle_radius) 
+            display->writePixel(x, y, !display->getPixel(x, y));
+        }
+    }
+}
+
 void AppHandler::loop(ButtonStates btn_states) {
     if(current_app != NULL) {
         current_app->loop(btn_states);
@@ -57,6 +77,8 @@ void AppHandler::loop(ButtonStates btn_states) {
         display->setCursor(0, position*10);
         display->write(apps[i]->get_name());
     }
+
+    draw_bouncing_cube();
 
     display->display();
 }

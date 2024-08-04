@@ -170,6 +170,12 @@ void AppJammer::loop(ButtonStates btn_states) {
 
     do_jamming = btn_states.UP || btn_states.DOWN || btn_states.LEFT || btn_states.RIGHT;
 
+    if(do_jamming) {
+        radio.transmitDirectAsync();
+    } else {
+        radio.finishTransmit();
+    }
+
     display->clearDisplay();
 
     if(do_jamming) {

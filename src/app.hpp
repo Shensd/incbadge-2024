@@ -19,7 +19,6 @@ protected:
     CC1101 radio;
     Adafruit_SSD1306 *display;
     AppHandler *handler;
-
 public:
     App(CC1101 radio, Adafruit_SSD1306 *display, AppHandler *handler) : radio(radio), display(display), handler(handler) {}
 
@@ -42,8 +41,14 @@ private:
 
     App* current_app = NULL;
 
-
     int32_t ui_selected_app = 0;
+
+    // int8_t circle_radius = 4;
+    uint16_t cube_w = 16, cube_h = 16;
+    int16_t cube_dx = 1, cube_dy = -1;
+    int16_t cube_x = SCREEN_WIDTH / 2, cube_y = SCREEN_HEIGHT / 2;
+
+    void draw_bouncing_cube();
 public:
     AppHandler(Adafruit_SSD1306 *display, CC1101 radio);
 

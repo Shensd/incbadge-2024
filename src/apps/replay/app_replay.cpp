@@ -6,43 +6,10 @@ void AppReplay::setup() {
 
 }
 
-void AppReplay::load_selected_sub_file(const AppReplay_NS::SubFile* subfile) {
+void AppReplay::load_selected_sub_file(const radiohal::SubFile* subfile) {
     radio.standby();
 
-    switch(subfile->preset_index) {
-    case AppReplay_NS::CONFIG_MOD_AM270:
-        if(radiohal::config_FuriHalSubGhzPresetOok270Async(radio) != RADIOLIB_ERR_NONE) {
-            Serial.println("error configuring radio to AM270 config");
-            return;
-        }
-        break;
-    case AppReplay_NS::CONFIG_MOD_AM650:
-        if(radiohal::config_FuriHalSubGhzPresetOok650Async(radio) != RADIOLIB_ERR_NONE) {
-            Serial.println("error configuring radio to AM650 config");
-            return;
-        }
-        break;
-    case AppReplay_NS::CONFIG_MOD_FM238:
-        if(radiohal::config_FuriHalSubGhzPreset2FSKDev238Async(radio) != RADIOLIB_ERR_NONE) {
-            Serial.println("error configuring radio to FM238 config");
-            return;
-        }
-        break;
-    case AppReplay_NS::CONFIG_MOD_FM476:
-        if(radiohal::config_FuriHalSubGhzPreset2FSKDev476Async(radio) != RADIOLIB_ERR_NONE) {
-            Serial.println("error configuring radio to FM476 config");
-            return;
-        }
-        break;
-    case AppReplay_NS::CONFIG_MOD_CUSTOM:
-        if(radiohal::load_config(radio, subfile->custom_preset_data) != RADIOLIB_ERR_NONE) {
-            Serial.println("error loading custom config (uh oh)");
-            return;
-        }
-        break;
-    default:
-        break;
-    }
+    radiohal::set_config_from_preset_index(radio, subfile->preset_index, subfile->custom_preset_data);
 
     if(radio.setFrequency((float)subfile->frequency_hz / 1000000.0) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting radio frequency %dHz", subfile->frequency_hz);
@@ -166,23 +133,13 @@ void AppReplay::loop_configuration(ButtonStates btn_states) {
     display->write(buffer);
 
     sprintf(buffer, "PRESET:  ");
-    switch(AppReplay_NS::DEFAULT_SUB_FILES[temp_sub_file_index].preset_index) {
-    case AppReplay_NS::CONFIG_MOD_AM270:
-        strcpy(buffer+sizeof("PRESET:"), STR_AM270);
-        break;
-    case AppReplay_NS::CONFIG_MOD_AM650:
-        strcpy(buffer+sizeof("PRESET:"), STR_AM650);
-        break;
-    case AppReplay_NS::CONFIG_MOD_FM238:
-        strcpy(buffer+sizeof("PRESET:"), STR_FM238);
-        break;
-    case AppReplay_NS::CONFIG_MOD_FM476:
-        strcpy(buffer+sizeof("PRESET:"), STR_FM476);
-        break;
-    case AppReplay_NS::CONFIG_MOD_CUSTOM:
-        strcpy(buffer+sizeof("PRESET:"), STR_CUSTOM);
-        break;
-    }
+    strcpy(
+        buffer+sizeof("PRESET:"), 
+        radiohal::get_preset_string_from_index(
+            AppReplay_NS::DEFAULT_SUB_FILES[temp_sub_file_index].preset_index
+        )
+    );
+
     display->setCursor(2, 40);
     display->write(buffer);
     
@@ -248,9 +205,10 @@ void AppReplay::loop(ButtonStates btn_states) {
     if(do_transmit) {
         display->write("Transmitting!");
 
+        line_animation_offset = (line_animation_offset + 1) % SCREEN_WIDTH;
+
         display->fillRect(
-            // just use a separate variable and fake the effect
-            (((float)transmit_index / (float)current_subfile->num_timings) * (float)SCREEN_WIDTH), 
+            line_animation_offset, 
             SCREEN_HEIGHT - 8, 
             4, 
             8, 
