@@ -5,27 +5,33 @@ AppFoxHunt::AppFoxHunt(CC1101 radio, Adafruit_SSD1306* display, AppHandler* hand
 void AppFoxHunt::setup() {
     pinMode(RADIO_gd0, INPUT);
 
+    int16_t status = 0;
+
     if(modulation == CONFIG_ASK) {
-        if(radio.setOOK(true) != RADIOLIB_ERR_NONE) {
-            Serial.println("error setting OOK");
+        if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error setting OOK, %d\n", status);
+            handler->exit_current();
+            return;
         }
     }
     if(modulation == CONFIG_FSK) {
-        if(radio.setOOK(false) != RADIOLIB_ERR_NONE) {
-            Serial.println("error setting ASK (setOOK(false))");
+        if((status = radio.setOOK(false)) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error setting ASK (setOOK(false)), %d\n", status);
+            handler->exit_current();
+            return;
         }
     }
 
-    if(radio.setFrequency(frequency) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting frequency");
+    if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting frequency, %d\n", status);
+        handler->exit_current();
+        return;
     }
 
-    if(radio.setOutputPower(10) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting output power");
-    }
-
-    if(radio.receiveDirectAsync() != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting receive direct async");
+    if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting receive direct async, %d\n", status);
+        handler->exit_current();
+        return;
     }
     delay(100);
 
@@ -37,6 +43,7 @@ void AppFoxHunt::setup() {
 }
 
 void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
+    int16_t status = 0;
 
     // exit and save, make sure you make the actual config changes here!
     if(btn_states.A_FALLING_EDGE) {
@@ -49,29 +56,43 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
 
         radio.standby();
 
-        if(radio.setFrequency(frequency) != RADIOLIB_ERR_NONE) {
-            Serial.println("error setting frequency");
+        if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error setting frequency, %d\n", status);
+            handler->exit_current();
+            return;
         }
 
         if(modulation == CONFIG_ASK) {
-            if(radio.setOOK(true) != RADIOLIB_ERR_NONE) {
-                Serial.println("error setting OOK");
+            if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
+                Serial.printf("error setting OOK, %d\n", status);
+                handler->exit_current();
+                return;
             }
         }
         if(modulation == CONFIG_FSK) {
-            if(radio.setOOK(false) != RADIOLIB_ERR_NONE) {
-                Serial.println("error setting ASK (setOOK(false))");
+            if((status = radio.setOOK(false)) != RADIOLIB_ERR_NONE) {
+                Serial.printf("error setting ASK (setOOK(false)), %d\n", status);
+                handler->exit_current();
+                return;
             }
         }
 
-        radio.receiveDirectAsync();
+        if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in receive direct async, %d\n", status);
+            handler->exit_current();
+            return;
+        }
 
         return;
     }
     // exit without saving
     if(btn_states.B_FALLING_EDGE) {
         in_configuration_loop = false;
-        radio.receiveDirectAsync();
+        if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in receive direct async, %d\n", status);
+            handler->exit_current();
+            return;
+        }
         return;
     }
     
@@ -295,7 +316,9 @@ void AppFoxHunt::loop1() {
 }
 
 void AppFoxHunt::close() {
-    if(radio.standby() != RADIOLIB_ERR_NONE) {
-        Serial.println("error putting radio in standby");
+    int16_t status = 0;
+
+    if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio in standby, %d\n", status);
     }
 }

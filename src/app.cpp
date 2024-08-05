@@ -9,9 +9,20 @@ void AppHandler::exit_current() {
 
     // make sure radio is always powered down when an app is closed,
     // since it's the most power hungry componenet
-    radio.finishTransmit();
-    radio.packetMode();
-    radio.standby();
+    int16_t status = 0;
+
+    if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error running finish transmit, %d\n", status);
+        return;
+    }
+    if((status = radio.packetMode()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio in packet mode, %d\n", status);
+        return;
+    }
+    if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio in standby, %d\n", status);
+        return;
+    }
 
     rp2040.idleOtherCore();
 
@@ -32,9 +43,7 @@ void AppHandler::start_app_by_index(uint32_t index) {
     if(index < num_apps) {
         start_app(apps[index]);
     } else {
-        #ifdef DO_SERIAL_DEBUG_INFO
         Serial.printf("attempted to start app of index %d when max index %d\n", index, num_apps - 1);
-        #endif // DO_SERIAL_DEBUG_INFO
     }
 }
 

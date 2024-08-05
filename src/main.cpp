@@ -5,14 +5,11 @@
 #include <SPI.h>
 #include <stdint.h>
 
-#define DO_SERIAL_DEBUG_INFO 1
-
 #include "pins.hpp"
 #include "buttons.hpp"
 #include "app.hpp"
 
 #include "apps/idle/app_idle.hpp"
-#include "apps/morse/app_morse.hpp"
 #include "apps/jammer/app_jammer.hpp"
 #include "apps/foxhunt/app_foxhunt.hpp"
 #include "apps/pixelpainter/app_pixelpainter.hpp"
@@ -23,6 +20,7 @@
 #include "apps/record/app_record.hpp"
 #include "apps/flash/app_flash.hpp"
 #include "apps/scanner/app_scanner.hpp"
+#include "apps/pocsag/app_pocsag.hpp"
 
 pin_size_t button_pins[] = {BTN_PIN_UP, BTN_PIN_DOWN, BTN_PIN_LEFT, BTN_PIN_RIGHT, BTN_PIN_A, BTN_PIN_B};
 
@@ -81,6 +79,7 @@ void setup() {
     handler->add_app(new AppRecord(radio, display, handler));
     handler->add_app(new AppScanner(radio, display, handler));
     handler->add_app(new AppJammer(radio, display, handler));
+    handler->add_app(new AppPOCSAG(radio, display, handler));
     handler->add_app(new AppFoxHunt(radio, display, handler));
     handler->add_app(new AppFox(radio, display, handler));
     handler->add_app(new AppUSB(radio, display, handler));

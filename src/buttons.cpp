@@ -57,24 +57,3 @@ ButtonStates get_button_states() {
 
     return button_states;
 }
-
-// int32_t set_button_hold_tick_callback(button_tick_callback cb, uint32_t tick_length_ms) {
-//     if(Buttons_NS::callback_index < BUTTON_TICK_MAX_CBS - 1) return -1;
-
-//     Buttons_NS::button_ticks[Buttons_NS::callback_index].timer = millis();
-//     Buttons_NS::button_ticks[Buttons_NS::callback_index].callback = cb;
-//     Buttons_NS::button_ticks[Buttons_NS::callback_index].tick_length_ms = tick_length_ms;
-
-//     Buttons_NS::callback_index++;
-// }
-
-// void tick_button(int32_t callback_id, ButtonStates button_states) {
-//     if(callback_id > Buttons_NS::callback_index) return;
-
-//     Buttons_NS::ButtonTick* bt = &Buttons_NS::button_ticks[callback_id];
-
-//     if(millis() > bt->timer + bt->tick_length_ms) {
-//         bt->timer = millis();
-//         bt->callback();
-//     }
-// }

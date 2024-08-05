@@ -3,27 +3,32 @@
 AppJammer::AppJammer(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {}
 
 void AppJammer::setup() {
-    if(radio.setOOK(true) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting OOK");
+    int16_t status = 0;
+
+    if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting OOK, %d\n", status);
+        handler->exit_current();
+        return;
     }
 
-    if(radio.setFrequency(frequency) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting frequency");
+    if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting frequency, %d\n", status);
+        handler->exit_current();
+        return;
     }
-
-    // if(radio.setOutputPower(10) != RADIOLIB_ERR_NONE) {
-    //     Serial.println("error setting output power");
-    // }
 
     pinMode(RADIO_gd0, OUTPUT);
     digitalWrite(RADIO_gd0, LOW);
 
-    if(radio.transmitDirectAsync() != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting transmitDirectAsync");
+    if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting transmitDirectAsync, %d\n", status);
+        handler->exit_current();
+        return;
     }
 }
 
 void AppJammer::loop_configuration(ButtonStates btn_states) {
+    int16_t status = 0;
 
     // exit and save, make sure you make the actual config changes here!
     if(btn_states.A_FALLING_EDGE) {
@@ -33,18 +38,28 @@ void AppJammer::loop_configuration(ButtonStates btn_states) {
 
         radio.standby();
 
-        if(radio.setFrequency(frequency) != RADIOLIB_ERR_NONE) {
-            Serial.println("error setting frequency");
+        if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error setting frequency, %d\n", status);
+            handler->exit_current();
+            return;
         }
 
-        radio.transmitDirectAsync();
+        if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in transmit direct async, %d\n", status);
+            handler->exit_current();
+            return;
+        }
 
         return;
     }
     // exit without saving
     if(btn_states.B_FALLING_EDGE) {
         in_configuration_loop = false;
-        radio.receiveDirectAsync();
+        if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in transmit direct async, %d\n", status);
+            handler->exit_current();
+            return;
+        }
         return;
     }
     
@@ -148,6 +163,8 @@ void AppJammer::loop_configuration(ButtonStates btn_states) {
 }
 
 void AppJammer::loop(ButtonStates btn_states) {
+    int16_t status = 0;
+
     if(in_configuration_loop) {
         loop_configuration(btn_states);
         return;
@@ -171,13 +188,21 @@ void AppJammer::loop(ButtonStates btn_states) {
     // do_jamming = btn_states.UP || btn_states.DOWN || btn_states.LEFT || btn_states.RIGHT;
 
     if(btn_states.UP_RISING_EDGE || btn_states.DOWN_RISING_EDGE || btn_states.LEFT_RISING_EDGE || btn_states.RIGHT_RISING_EDGE) {
-        radio.transmitDirectAsync();
+        if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in transmit direct async, %d\n", status);
+            handler->exit_current();
+            return;
+        }
         delay(50);
         do_jamming = true;
     }  else if(btn_states.UP_FALLING_EDGE || btn_states.DOWN_FALLING_EDGE || btn_states.LEFT_FALLING_EDGE || btn_states.RIGHT_FALLING_EDGE) {
         do_jamming = false;
         delay(50);
-        radio.finishTransmit();
+        if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in standby, %d\n", status);
+            handler->exit_current();
+            return;
+        }
     }
 
     display->clearDisplay();
@@ -222,11 +247,9 @@ void AppJammer::loop1() {
 }
 
 void AppJammer::close() {
-    if(radio.finishTransmit() != RADIOLIB_ERR_NONE) {
-        Serial.println("error putting radio to standby");
-    }
+    int16_t status = 0;
 
-    if(radio.standby() != RADIOLIB_ERR_NONE) {
-        Serial.println("error putting radio in standby");
+    if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio in standby, %d\n", status);
     }
 }

@@ -3,27 +3,29 @@
 AppRecord::AppRecord(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {}
 
 void AppRecord::setup() {
+    int16_t status = 0;
+
     for(int i = 0; i < sizeof(previous_rssi_readings) / sizeof(previous_rssi_readings[0]); i++) {
         previous_rssi_readings[i] = rssi_lower_bound;
     }
 
-    if(radio.setOOK(use_ook) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting OOK mode");
+    if((status = radio.setOOK(use_ook)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting OOK mode, %d\n", status);
         handler->exit_current();
         return;
     }
-    if(radio.setFrequency(frequency) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting frequency");
+    if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting frequency, %d\n", status);
         handler->exit_current();
         return;
     }
-    if(radio.setRxBandwidth(available_bandwidths[rx_bandwidth_index]) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting rx bandwidth");
+    if((status = radio.setRxBandwidth(available_bandwidths[rx_bandwidth_index])) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting rx bandwidth, %d\n", status);
         handler->exit_current();
         return;
     }
-    if(radio.setFrequencyDeviation(fsk_deviation) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting frequency deviation");
+    if((status = radio.setFrequencyDeviation(fsk_deviation)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting frequency deviation, %d\n", status);
         handler->exit_current();
         return;
     }
@@ -32,6 +34,7 @@ void AppRecord::setup() {
 
 
 void AppRecord::loop_configuration(ButtonStates btn_states) {
+    int16_t status = 0;
 
     // exit and save, make sure you make the actual config changes here!
     if(btn_states.A_FALLING_EDGE) {
@@ -42,10 +45,26 @@ void AppRecord::loop_configuration(ButtonStates btn_states) {
         rx_bandwidth_index = temp_rx_bandwidth_index;
         fsk_deviation = temp_fsk_deviation;
 
-        radio.setOOK(use_ook);
-        radio.setFrequency(frequency);
-        radio.setRxBandwidth(available_bandwidths[rx_bandwidth_index]);
-        radio.setFrequencyDeviation(fsk_deviation);
+        if((status = radio.setOOK(use_ook)) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error setting OOK mode, %d\n", status);
+            handler->exit_current();
+            return;
+        }
+        if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error setting frequency, %d\n", status);
+            handler->exit_current();
+            return;
+        }
+        if((status = radio.setRxBandwidth(available_bandwidths[rx_bandwidth_index])) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error setting rx bandwidth, %d\n", status);
+            handler->exit_current();
+            return;
+        }
+        if((status = radio.setFrequencyDeviation(fsk_deviation)) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error setting frequency deviation, %d\n", status);
+            handler->exit_current();
+            return;
+        }
 
         return;
     }
@@ -268,6 +287,8 @@ void AppRecord::dump_recording_over_serial() {
 }
 
 void AppRecord::loop(ButtonStates btn_states) {
+    int16_t status = 0;
+
     if(in_configuration_loop) {
         loop_configuration(btn_states);
         return;
@@ -292,20 +313,42 @@ void AppRecord::loop(ButtonStates btn_states) {
     }
 
     if(btn_states.DOWN_RISING_EDGE) {
+        if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in standby, %d\n", status);
+            handler->exit_current();
+            return;
+        }
+
         pinMode(RADIO_gd0, INPUT);
         tick_timer = micros();
         last_bit_time = micros();
         last_bit_state = HIGH;
         timings_index[timings_slot] = 0;
-        radio.receiveDirectAsync();
+
+        if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error setting receive direct async, %d\n", status);
+            handler->exit_current();
+            return;
+        }
 
         do_record = true;
     } else if(btn_states.UP_RISING_EDGE) {
         dump_recording_over_serial();
 
+        if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in standby, %d\n", status);
+            handler->exit_current();
+            return;
+        }
+
         pinMode(RADIO_gd0, OUTPUT);
         digitalWrite(RADIO_gd0, LOW);
-        radio.transmitDirectAsync();
+
+        if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error setting transmit direct async, %d\n", status);
+            handler->exit_current();
+            return;
+        }
 
         do_replay = true;
     }
@@ -318,7 +361,11 @@ void AppRecord::loop(ButtonStates btn_states) {
     }
 
     if(!do_record && !do_replay) {
-        radio.finishTransmit();
+        if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in standby, %d\n", status);
+            handler->exit_current();
+            return;
+        }
 
         if(btn_states.RIGHT_FALLING_EDGE) {
             timings_slot++;
@@ -437,7 +484,12 @@ void AppRecord::loop1() {
 }
 
 void AppRecord::close() {
+    int16_t status = 0;
+
     do_record = false;
     do_replay = false;
-    radio.finishTransmit();
+
+    if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio in standby, %d\n", status);
+    }
 }

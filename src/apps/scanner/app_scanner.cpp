@@ -3,12 +3,30 @@
 AppScanner::AppScanner(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {}
 
 void AppScanner::setup() {
+    int16_t status = 0;
+
     rp2040.idleOtherCore();
 
-    radio.setFrequency(scanner_frequency_list[frequency_index]);
-    radio.setOOK(true);
-    radio.setRxBandwidth(rx_bw);
-    radio.receiveDirectAsync();
+    if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting OOK mode, %d\n", status);
+        handler->exit_current();
+        return;
+    }
+    if((status = radio.setFrequency(scanner_frequency_list[frequency_index])) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting frequency, %d\n", status);
+        handler->exit_current();
+        return;
+    }
+    if((status = radio.setRxBandwidth(rx_bw)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting rx bandwidth, %d\n", status);
+        handler->exit_current();
+        return;
+    }
+    if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting receive direct async, %d\n", status);
+        handler->exit_current();
+        return;
+    }
 
     currently_scanning = false;
 }
@@ -18,6 +36,8 @@ void AppScanner::step_frequency_index() {
 }
 
 void AppScanner::loop(ButtonStates btn_states) {
+    int16_t status = 0;
+
     if(btn_states.B_FALLING_EDGE) {
         handler->exit_current();
         return;
@@ -40,13 +60,21 @@ void AppScanner::loop(ButtonStates btn_states) {
 
             step_frequency_index();
 
-            radio.standby();
+            if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+                Serial.printf("error putting radio in standby, %d\n", status);
+                handler->exit_current();
+                return;
+            }
 
             if(radio.setFrequency(scanner_frequency_list[frequency_index]) != RADIOLIB_ERR_NONE) {
                 Serial.printf("error setting frequency %.03f\n", scanner_frequency_list[frequency_index]);
             }
 
-            radio.receiveDirectAsync();
+            if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
+                Serial.printf("error setting receive direct async, %d\n", status);
+                handler->exit_current();
+                return;
+            }
 
             scanner_timer = millis();
         } else {
@@ -89,25 +117,13 @@ void AppScanner::loop(ButtonStates btn_states) {
             // so it doesn't give someone a seizure 
             freq_index_with_activity = frequency_index;
             currently_scanning = false;
-        } else {
-            // if(freq_index_with_activity == frequency_index) {
-            //     freq_index_with_activity = -1;
-            // }
-        }
+        } 
     }
 
     if(activity_on_frequency) {
         display->setCursor(2, 50);
         display->write("Caught activity!");
     }
-
-    // display->setCursor(2, 50);
-    // if(freq_index_with_activity > 0) {
-    //     sprintf(buffer, "ACTIVE FREQ: %.03f", scanner_frequency_list[freq_index_with_activity]);
-    //     display->write(buffer);
-    // } else {
-    //     display->write("ACTIVE FREQ:");
-    // }
 
     display->invertDisplay(activity_on_frequency);
 
@@ -119,5 +135,11 @@ void AppScanner::loop1() {
 }
 
 void AppScanner::close() {
+    int16_t status = 0;
+
     rp2040.resumeOtherCore();
+
+    if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio in standby, %d\n", status);
+    }
 }

@@ -7,12 +7,19 @@ void AppReplay::setup() {
 }
 
 void AppReplay::load_selected_sub_file(const radiohal::SubFile* subfile) {
+    int16_t status = 0;
+
     radio.standby();
 
-    radiohal::set_config_from_preset_index(radio, subfile->preset_index, subfile->custom_preset_data);
+    if((status = radiohal::set_config_from_preset_index(radio, subfile->preset_index, subfile->custom_preset_data)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error loading sub file configuration, %d\n", status);
+        handler->exit_current();
+        return;
+    }
 
-    if(radio.setFrequency((float)subfile->frequency_hz / 1000000.0) != RADIOLIB_ERR_NONE) {
-        Serial.printf("error setting radio frequency %dHz", subfile->frequency_hz);
+    if((status = radio.setFrequency((float)subfile->frequency_hz / 1000000.0)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting radio frequency %dHz, (%d)\n", subfile->frequency_hz);
+        handler->exit_current();
         return;
     }
 }
@@ -151,6 +158,8 @@ void AppReplay::loop_configuration(ButtonStates btn_states) {
 }
 
 void AppReplay::loop(ButtonStates btn_states) {
+    int16_t status = 0;
+
     if(in_configuration_loop) {
         loop_configuration(btn_states);
         return;
@@ -176,7 +185,11 @@ void AppReplay::loop(ButtonStates btn_states) {
     // transmit_once = btn_states.DOWN_FALLING_EDGE;
 
     if(!do_transmit) {
-        radio.finishTransmit();
+        if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in standby, %d\n", status);
+            handler->exit_current();
+            return;
+        }
         digitalWrite(RADIO_gd0, LOW);
     }
 
@@ -207,12 +220,6 @@ void AppReplay::loop(ButtonStates btn_states) {
 
         line_animation_offset = (line_animation_offset + 10) % SCREEN_WIDTH;
 
-        // display->fillRect(
-        //     line_animation_offset, 
-        //     SCREEN_HEIGHT - 16, 
-        //     2, 
-        //     12, 
-        //     SSD1306_BLACK);
         display->fillCircle(
             line_animation_offset, 
             SCREEN_HEIGHT - 16, 
@@ -227,13 +234,19 @@ void AppReplay::loop(ButtonStates btn_states) {
 }
 
 void AppReplay::loop1() {
+    int16_t status = 0;
+
     if(!do_transmit) {
         transmit_index = 0;
         radio_is_setup = false;
         return;
     }
     if(!radio_is_setup) {
-        radio.transmitDirectAsync();
+        if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in transmit direct async, %d\n", status);
+            handler->exit_current();
+            return;
+        }
         transmit_timer = millis();
         transmit_index = 0;
         radio_is_setup = true;
@@ -252,7 +265,11 @@ void AppReplay::loop1() {
 }
 
 void AppReplay::close() {
+    int16_t status = 0;
+    
     digitalWrite(RADIO_gd0, LOW);
-    radio.finishTransmit();
-    radio.standby();
+    
+    if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio in standby, %d\n", status);
+    }
 }

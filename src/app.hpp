@@ -57,9 +57,7 @@ public:
             apps[num_apps] = app;
             num_apps++;
         } else {
-            #ifdef DO_SERIAL_DEBUG_INFO
             Serial.printf("attempted to add app when at app limit (%d)\n", MAX_APPS);
-            #endif // DO_SERIAL_DEBUG_INFO
         }
     }
 
