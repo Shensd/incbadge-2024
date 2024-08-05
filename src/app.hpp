@@ -63,23 +63,9 @@ public:
         }
     }
 
-    void start_app(App* app) {
-        exit_current();
+    void start_app(App* app);
 
-        current_app = app;
-
-        current_app->setup();
-    }
-
-    void start_app_by_index(uint32_t index) {
-        if(index < num_apps) {
-            start_app(apps[index]);
-        } else {
-            #ifdef DO_SERIAL_DEBUG_INFO
-            Serial.printf("attempted to start app of index %d when max index %d\n", index, num_apps - 1);
-            #endif // DO_SERIAL_DEBUG_INFO
-        }
-    }
+    void start_app_by_index(uint32_t index);
 
     void exit_current();
     void loop(ButtonStates btn_states);

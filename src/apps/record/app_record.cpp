@@ -3,7 +3,31 @@
 AppRecord::AppRecord(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {}
 
 void AppRecord::setup() {
+    for(int i = 0; i < sizeof(previous_rssi_readings) / sizeof(previous_rssi_readings[0]); i++) {
+        previous_rssi_readings[i] = rssi_lower_bound;
+    }
 
+    if(radio.setOOK(use_ook) != RADIOLIB_ERR_NONE) {
+        Serial.println("error setting OOK mode");
+        handler->exit_current();
+        return;
+    }
+    if(radio.setFrequency(frequency) != RADIOLIB_ERR_NONE) {
+        Serial.println("error setting frequency");
+        handler->exit_current();
+        return;
+    }
+    if(radio.setRxBandwidth(available_bandwidths[rx_bandwidth_index]) != RADIOLIB_ERR_NONE) {
+        Serial.println("error setting rx bandwidth");
+        handler->exit_current();
+        return;
+    }
+    if(radio.setFrequencyDeviation(fsk_deviation) != RADIOLIB_ERR_NONE) {
+        Serial.println("error setting frequency deviation");
+        handler->exit_current();
+        return;
+    }
+   
 }
 
 
@@ -214,6 +238,35 @@ void AppRecord::loop_configuration(ButtonStates btn_states) {
     display->display();
 }
 
+void AppRecord::dump_recording_over_serial() {
+    Serial.println("Filetype: Flipper SubGhz RAW File");
+    Serial.println("Version: 1");
+    Serial.printf("Frequency: %d\n", (uint64_t)(frequency * 1000000));
+    switch(temp_preset_index) {
+    case 0:
+        Serial.println("Preset: FuriHalSubGhzPresetOok270Async");
+        break;
+    case 1:
+        Serial.println("Preset: FuriHalSubGhzPresetOok650Async");
+        break;
+    case 2:
+        Serial.println("Preset: FuriHalSubGhzPreset2FSKDev238Async");
+        break;
+    case 3:
+        Serial.println("Preset: FuriHalSubGhzPreset2FSKDev476Async");
+        break;
+    }
+    Serial.print("Protocol: RAW");
+    for(int i = 0; i < timings_index[timings_slot]; i++) {
+        if(i % 512 == 0) {
+            Serial.print("\nRAW_Data: ");
+        }
+        Serial.printf("%d ", timings[timings_slot][i]);
+    }
+
+    Serial.println("");
+}
+
 void AppRecord::loop(ButtonStates btn_states) {
     if(in_configuration_loop) {
         loop_configuration(btn_states);
@@ -238,49 +291,153 @@ void AppRecord::loop(ButtonStates btn_states) {
         return;
     }
 
-    if(btn_states.UP) {
+    if(btn_states.DOWN_RISING_EDGE) {
+        pinMode(RADIO_gd0, INPUT);
+        tick_timer = micros();
+        last_bit_time = micros();
+        last_bit_state = HIGH;
+        timings_index[timings_slot] = 0;
+        radio.receiveDirectAsync();
+
+        do_record = true;
+    } else if(btn_states.UP_RISING_EDGE) {
+        dump_recording_over_serial();
+
         pinMode(RADIO_gd0, OUTPUT);
         digitalWrite(RADIO_gd0, LOW);
-        do_record = true;
-    } else if(btn_states.DOWN) {
-        pinMode(RADIO_gd0, INPUT);
+        radio.transmitDirectAsync();
+
         do_replay = true;
     }
 
-    if(btn_states.UP_RISING_EDGE || btn_states.DOWN_RISING_EDGE) {
-        timings_index = 0;
-        last_timing_micros = micros();
+    if(!btn_states.UP) {
+        do_replay = false;
+    }
+    if(!btn_states.DOWN) {
+        do_record = false;
+    }
+
+    if(!do_record && !do_replay) {
+        radio.finishTransmit();
+
+        if(btn_states.RIGHT_FALLING_EDGE) {
+            timings_slot++;
+        }
+        if(btn_states.LEFT_FALLING_EDGE) {
+            timings_slot--;
+        }
+
+        if(timings_slot < 0) timings_slot = APPRECORD_NUM_TIMINGS_SLOTS - 1;
+        if(timings_slot >= APPRECORD_NUM_TIMINGS_SLOTS) timings_slot = 0;
     }
 
     display->clearDisplay();
 
     display->setTextSize(1);
-    display->setTextColor(SSD1306_WHITE);
+    if(do_replay) {
+        display->fillScreen(SSD1306_WHITE);
+        display->setTextColor(SSD1306_BLACK);
+    }
+    else {
+        display->setTextColor(SSD1306_WHITE);
+    }
     display->cp437(true);
     display->setCursor(2, 2);
-    display->write(":3c");
+    display->write("UP=replay DOWN=record");
+
+    display->setCursor(2, 10);
+    char buffer[32];
+    sprintf(buffer, "Timings: %d", timings_index[timings_slot]);
+    display->write(buffer);
+
+    display->setCursor(2, 20);
+    sprintf(buffer, "Save slot: %d", timings_slot + 1);
+    display->write(buffer);
+
+    display->setCursor(2, 30);
+    if(do_record) {
+        display->write("Recording!");
+    } else if(do_replay) {
+        display->write("Transmitting!");
+    }
+
+    uint8_t rssi_reading_array_len = (sizeof(previous_rssi_readings) / sizeof(previous_rssi_readings[0]));
+
+    if(do_record) {
+        float rssi = radiohal::get_RSSI(radio); 
+
+        if(millis() > last_rssi_reading + rssi_reading_frequency_ms) {
+            float adjusted_rssi = rssi;
+
+            if(rssi < rssi_lower_bound) adjusted_rssi = rssi_lower_bound;
+            if(rssi > rssi_upper_bound) adjusted_rssi = rssi_upper_bound;
+
+            previous_rssi_readings[rssi_reading_index] = rssi;
+            rssi_reading_index = (rssi_reading_index + 1) % rssi_reading_array_len;
+
+            last_rssi_reading = millis();
+        }
+    }
+
+    for(uint8_t i = 0; i < rssi_reading_array_len; i++) {
+        uint32_t height = map((long) previous_rssi_readings[i], rssi_lower_bound, rssi_upper_bound, 0, 32);
+
+        display->fillRect(
+            i * (SCREEN_WIDTH / rssi_reading_array_len),
+            SCREEN_HEIGHT - height,
+            (SCREEN_WIDTH / rssi_reading_array_len),
+            SCREEN_HEIGHT,
+            SSD1306_WHITE
+        );
+    }
+
+    if(do_record) {
+        display->fillRect(
+            rssi_reading_index * (SCREEN_WIDTH / rssi_reading_array_len),
+            SCREEN_HEIGHT - 32,
+            1,
+            SCREEN_HEIGHT,
+            SSD1306_WHITE
+        );
+    }
+
+    // display->setCursor(2, SCREEN_HEIGHT - 8);
+    // display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    // display->write("a=settings");
 
     display->display();
 }
 
 void AppRecord::loop1() {
     if(do_record) {
-        if(timings_in_buffer == 0) {
-            if(digitalRead(RADIO_gd0) == LOW) return;
-
-            // im cooked, finish this tommorrow lmao
+        if(timings_index[timings_slot] >= sizeof(timings[timings_slot]) / sizeof(timings[timings_slot][0])) {
+            return;
         }
+
+        bool reading = digitalRead(RADIO_gd0);
+
+        if(reading == last_bit_state) return;
+
+        timings[timings_slot][timings_index[timings_slot]] = (last_bit_state == 0 ? -1 : 1) * (micros() - last_bit_time);
+
+        last_bit_state = reading;
+        last_bit_time = micros();
+        timings_index[timings_slot]++;
     }
     if(do_replay) {
-        for(int i = 0; i < timings_in_buffer; i++) {
-            if(timings[i] < 0) digitalWrite(RADIO_gd0, LOW);
+        for(int i = 0; i < timings_index[timings_slot]; i++) {
+            if(!do_replay) break;
+
+            if(timings[timings_slot][i] < 0) digitalWrite(RADIO_gd0, LOW);
             else digitalWrite(RADIO_gd0, HIGH);
 
-            delayMicroseconds(abs(timings[i]));
+            delayMicroseconds(abs(timings[timings_slot][i]));
         }
     }
 }
 
 void AppRecord::close() {
-    
+    do_record = false;
+    do_replay = false;
+    radio.finishTransmit();
 }

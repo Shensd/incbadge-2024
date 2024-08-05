@@ -205,14 +205,20 @@ void AppReplay::loop(ButtonStates btn_states) {
     if(do_transmit) {
         display->write("Transmitting!");
 
-        line_animation_offset = (line_animation_offset + 1) % SCREEN_WIDTH;
+        line_animation_offset = (line_animation_offset + 10) % SCREEN_WIDTH;
 
-        display->fillRect(
+        // display->fillRect(
+        //     line_animation_offset, 
+        //     SCREEN_HEIGHT - 16, 
+        //     2, 
+        //     12, 
+        //     SSD1306_BLACK);
+        display->fillCircle(
             line_animation_offset, 
-            SCREEN_HEIGHT - 8, 
+            SCREEN_HEIGHT - 16, 
             4, 
-            8, 
-            SSD1306_BLACK);
+            SSD1306_BLACK
+        );
     } else {
         display->write("Press UP to TX!");
     }

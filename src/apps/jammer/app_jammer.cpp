@@ -11,9 +11,9 @@ void AppJammer::setup() {
         Serial.println("error setting frequency");
     }
 
-    if(radio.setOutputPower(10) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting output power");
-    }
+    // if(radio.setOutputPower(10) != RADIOLIB_ERR_NONE) {
+    //     Serial.println("error setting output power");
+    // }
 
     pinMode(RADIO_gd0, OUTPUT);
     digitalWrite(RADIO_gd0, LOW);
@@ -168,11 +168,15 @@ void AppJammer::loop(ButtonStates btn_states) {
         return;
     }
 
-    do_jamming = btn_states.UP || btn_states.DOWN || btn_states.LEFT || btn_states.RIGHT;
+    // do_jamming = btn_states.UP || btn_states.DOWN || btn_states.LEFT || btn_states.RIGHT;
 
-    if(do_jamming) {
+    if(btn_states.UP_RISING_EDGE || btn_states.DOWN_RISING_EDGE || btn_states.LEFT_RISING_EDGE || btn_states.RIGHT_RISING_EDGE) {
         radio.transmitDirectAsync();
-    } else {
+        delay(50);
+        do_jamming = true;
+    }  else if(btn_states.UP_FALLING_EDGE || btn_states.DOWN_FALLING_EDGE || btn_states.LEFT_FALLING_EDGE || btn_states.RIGHT_FALLING_EDGE) {
+        do_jamming = false;
+        delay(50);
         radio.finishTransmit();
     }
 
@@ -199,7 +203,7 @@ void AppJammer::loop(ButtonStates btn_states) {
     display->setCursor(2, 2);
     display->write(text_buffer);
     display->setCursor(2, 10);
-    display->write("hold any directional");
+    display->write("Hold any directional");
     display->setCursor(2, 20);
     display->write("to transmit!");
     
@@ -208,20 +212,16 @@ void AppJammer::loop(ButtonStates btn_states) {
 
 void AppJammer::loop1() {
     if(do_jamming) {
-        digitalWrite(RADIO_gd0, jammer_status);
-        // digitalWrite(RADIO_gd0, HIGH);
-        jammer_status = !jammer_status;
-        delayMicroseconds(50);
+        digitalWrite(RADIO_gd0, HIGH);
+        delayMicroseconds(100);
+        digitalWrite(RADIO_gd0, LOW);
+        delayMicroseconds(100);
     } else {
         digitalWrite(RADIO_gd0, LOW);
     }
 }
 
 void AppJammer::close() {
-    if(radio.setOutputPower(0) != RADIOLIB_ERR_NONE) {
-        Serial.println("error setting output power");
-    }
-
     if(radio.finishTransmit() != RADIOLIB_ERR_NONE) {
         Serial.println("error putting radio to standby");
     }

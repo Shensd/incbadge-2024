@@ -237,8 +237,7 @@ void AppFox::loop(ButtonStates btn_states) {
     display->clearDisplay();
 
     if(millis() > transmit_timer + transmit_delay_ms &&
-        millis() < transmit_timer + transmit_delay_ms + transmit_duration_ms &&
-        !require_frequency_confirmation) 
+        millis() < transmit_timer + transmit_delay_ms + transmit_duration_ms) 
     {
         display->fillScreen(SSD1306_WHITE);
         display->setTextColor(SSD1306_BLACK);
@@ -257,17 +256,12 @@ void AppFox::loop(ButtonStates btn_states) {
     sprintf(text_buffer, "%s %.3fMHz", modulation == CONFIG_ASK ? "ASK" : "FSK", frequency);
     display->write(text_buffer);
     display->setCursor(2, 10);
-    sprintf(text_buffer, "gap duration: %ds", transmit_delay_ms / 1000);
+    sprintf(text_buffer, "Gap duration: %ds", transmit_delay_ms / 1000);
     display->write(text_buffer);
     display->setCursor(2, 20);
-    sprintf(text_buffer, "tx duration: %ds", transmit_duration_ms / 1000);
+    sprintf(text_buffer, "TX duration: %ds", transmit_duration_ms / 1000);
     display->write(text_buffer);
     // display->write("This app transmits while open!");
-
-    if(require_frequency_confirmation) {
-        display->setCursor(2, 30);
-        display->write("A to confirm freq");
-    }
 
     display->display();
 }

@@ -21,6 +21,8 @@
 #include "apps/replay/app_replay.hpp"
 #include "apps/usb/app_usb.hpp"
 #include "apps/record/app_record.hpp"
+#include "apps/flash/app_flash.hpp"
+#include "apps/scanner/app_scanner.hpp"
 
 pin_size_t button_pins[] = {BTN_PIN_UP, BTN_PIN_DOWN, BTN_PIN_LEFT, BTN_PIN_RIGHT, BTN_PIN_A, BTN_PIN_B};
 
@@ -77,11 +79,13 @@ void setup() {
     handler->add_app(new AppReadme(radio, display, handler));
     handler->add_app(new AppReplay(radio, display, handler));
     handler->add_app(new AppRecord(radio, display, handler));
+    handler->add_app(new AppScanner(radio, display, handler));
     handler->add_app(new AppJammer(radio, display, handler));
     handler->add_app(new AppFoxHunt(radio, display, handler));
     handler->add_app(new AppFox(radio, display, handler));
     handler->add_app(new AppUSB(radio, display, handler));
     handler->add_app(new AppPixelPainter(radio, display, handler));
+    handler->add_app(new AppFlash(radio, display, handler));
 
     handler->start_app_by_index(0); // load idle animation
 }

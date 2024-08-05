@@ -10,15 +10,15 @@ void AppUSB::setup() {
     display->setTextColor(SSD1306_WHITE);
     display->cp437(true);
     display->setCursor(2, 2);
-    display->write("USB mode started,");
-
-    display->setCursor(2, 10);
-    display->write("Connect to serial to");
+    display->write("USB mode started.");
 
     display->setCursor(2, 20);
+    display->write("Connect to serial to");
+
+    display->setCursor(2, 30);
     display->write("access CLI.");
 
-    display->setCursor(2, 40);
+    display->setCursor(2, 50);
     display->write("Press B to exit.");
 
     display->display();

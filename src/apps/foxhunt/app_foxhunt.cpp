@@ -268,28 +268,23 @@ void AppFoxHunt::loop(ButtonStates btn_states) {
     display->setCursor(2, 10);
     display->write(text_buffer);
 
-    if(require_frequency_confirmation) {
-        display->setCursor(2, 20);
-        display->write("A to confirm freq");
-    } else {
-        sprintf(text_buffer, "%d", rssi_upper_bound);
-        display->setCursor(2, 20);
-        display->write(text_buffer);
-        sprintf(text_buffer, "%d", rssi_lower_bound);
-        display->setCursor(2, 64 - 8);
-        display->write(text_buffer);
+    sprintf(text_buffer, "%d", rssi_upper_bound);
+    display->setCursor(2, 20);
+    display->write(text_buffer);
+    sprintf(text_buffer, "%d", rssi_lower_bound);
+    display->setCursor(2, 64 - 8);
+    display->write(text_buffer);
 
-        for(uint8_t i = 0; i < rssi_reading_array_len; i++) {
-            uint32_t height = map((long) previous_rssi_readings[i], rssi_lower_bound, rssi_upper_bound, 0, 48);
+    for(uint8_t i = 0; i < rssi_reading_array_len; i++) {
+        uint32_t height = map((long) previous_rssi_readings[i], rssi_lower_bound, rssi_upper_bound, 0, 48);
 
-            display->fillRect(
-                i * (SCREEN_WIDTH / rssi_reading_array_len),
-                SCREEN_HEIGHT - height,
-                (SCREEN_WIDTH / rssi_reading_array_len),
-                SCREEN_HEIGHT,
-                SSD1306_WHITE
-            );
-        }
+        display->fillRect(
+            i * (SCREEN_WIDTH / rssi_reading_array_len),
+            SCREEN_HEIGHT - height,
+            (SCREEN_WIDTH / rssi_reading_array_len),
+            SCREEN_HEIGHT,
+            SSD1306_WHITE
+        );
     }
 
     display->display();

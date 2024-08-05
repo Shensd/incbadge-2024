@@ -13,12 +13,30 @@ void AppHandler::exit_current() {
     radio.packetMode();
     radio.standby();
 
+    rp2040.idleOtherCore();
+
     current_app = NULL;
 }
 
-// inline uint8_t dist_from_pixel(int8_t x0, int8_t y0, int8_t x1, int8_t y1) {
-//     return sqrt((abs(x1 - x0) * abs(x1 - x0)) + (abs(y1 - y0) * abs(y1 - y0)));
-// }
+void AppHandler::start_app(App* app) {
+    exit_current();
+
+    current_app = app;
+
+    rp2040.resumeOtherCore();
+
+    current_app->setup();
+}
+
+void AppHandler::start_app_by_index(uint32_t index) {
+    if(index < num_apps) {
+        start_app(apps[index]);
+    } else {
+        #ifdef DO_SERIAL_DEBUG_INFO
+        Serial.printf("attempted to start app of index %d when max index %d\n", index, num_apps - 1);
+        #endif // DO_SERIAL_DEBUG_INFO
+    }
+}
 
 void AppHandler::draw_bouncing_cube() {
     cube_x += cube_dx;
