@@ -20,7 +20,7 @@
 #include "apps/record/app_record.hpp"
 #include "apps/flash/app_flash.hpp"
 #include "apps/scanner/app_scanner.hpp"
-#include "apps/pocsag/app_pocsag.hpp"
+#include "apps/mouse/app_mouse.hpp"
 
 pin_size_t button_pins[] = {BTN_PIN_UP, BTN_PIN_DOWN, BTN_PIN_LEFT, BTN_PIN_RIGHT, BTN_PIN_A, BTN_PIN_B};
 
@@ -79,7 +79,8 @@ void setup() {
     handler->add_app(new AppRecord(radio, display, handler));
     handler->add_app(new AppScanner(radio, display, handler));
     handler->add_app(new AppJammer(radio, display, handler));
-    handler->add_app(new AppPOCSAG(radio, display, handler));
+    handler->add_app(new AppMouse(radio, display, handler));
+    // handler->add_app(new AppPOCSAG(radio, display, handler));
     handler->add_app(new AppFoxHunt(radio, display, handler));
     handler->add_app(new AppFox(radio, display, handler));
     handler->add_app(new AppUSB(radio, display, handler));
