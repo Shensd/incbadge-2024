@@ -10,19 +10,19 @@ void AppFox::setup() {
 
     if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting OOK, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
 
     if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting frequency, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
 
     if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting receive direct async, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
     delay(100);
@@ -43,28 +43,28 @@ void AppFox::loop_configuration(ButtonStates btn_states) {
 
         if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
             Serial.printf("error setting frequency, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 
         if(modulation == CONFIG_ASK) {
             if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
                 Serial.printf("error setting OOK, %d\n", status);
-                handler->exit_current();
+                handler->exit_current_with_error(status);
                 return;
             }
         }
         if(modulation == CONFIG_FSK) {
             if((status = radio.setOOK(false)) != RADIOLIB_ERR_NONE) {
                 Serial.printf("error setting ASK (setOOK(false)), %d\n", status);
-                handler->exit_current();
+                handler->exit_current_with_error(status);
                 return;     
             }
         }
 
         if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in transmit direct async, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 
@@ -75,7 +75,7 @@ void AppFox::loop_configuration(ButtonStates btn_states) {
         in_configuration_loop = false;
         if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in transmit direct async. %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
         return;

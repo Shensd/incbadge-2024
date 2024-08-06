@@ -11,22 +11,22 @@ void AppRecord::setup() {
 
     if((status = radio.setOOK(use_ook)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting OOK mode, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
     if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting frequency, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
     if((status = radio.setRxBandwidth(available_bandwidths[rx_bandwidth_index])) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting rx bandwidth, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
     if((status = radio.setFrequencyDeviation(fsk_deviation)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting frequency deviation, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
    
@@ -47,22 +47,22 @@ void AppRecord::loop_configuration(ButtonStates btn_states) {
 
         if((status = radio.setOOK(use_ook)) != RADIOLIB_ERR_NONE) {
             Serial.printf("error setting OOK mode, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
         if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
             Serial.printf("error setting frequency, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
         if((status = radio.setRxBandwidth(available_bandwidths[rx_bandwidth_index])) != RADIOLIB_ERR_NONE) {
             Serial.printf("error setting rx bandwidth, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
         if((status = radio.setFrequencyDeviation(fsk_deviation)) != RADIOLIB_ERR_NONE) {
             Serial.printf("error setting frequency deviation, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 
@@ -315,7 +315,7 @@ void AppRecord::loop(ButtonStates btn_states) {
     if(btn_states.DOWN_RISING_EDGE) {
         if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in standby, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 
@@ -327,7 +327,7 @@ void AppRecord::loop(ButtonStates btn_states) {
 
         if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error setting receive direct async, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 
@@ -337,7 +337,7 @@ void AppRecord::loop(ButtonStates btn_states) {
 
         if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in standby, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 
@@ -346,7 +346,7 @@ void AppRecord::loop(ButtonStates btn_states) {
 
         if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error setting transmit direct async, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 
@@ -363,7 +363,7 @@ void AppRecord::loop(ButtonStates btn_states) {
     if(!do_record && !do_replay) {
         if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in standby, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 

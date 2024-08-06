@@ -7,13 +7,13 @@ void AppJammer::setup() {
 
     if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting OOK, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
 
     if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting frequency, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
 
@@ -22,7 +22,7 @@ void AppJammer::setup() {
 
     if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting transmitDirectAsync, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
 }
@@ -40,13 +40,13 @@ void AppJammer::loop_configuration(ButtonStates btn_states) {
 
         if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
             Serial.printf("error setting frequency, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 
         if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in transmit direct async, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 
@@ -57,7 +57,7 @@ void AppJammer::loop_configuration(ButtonStates btn_states) {
         in_configuration_loop = false;
         if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in transmit direct async, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
         return;
@@ -190,7 +190,7 @@ void AppJammer::loop(ButtonStates btn_states) {
     if(btn_states.UP_RISING_EDGE || btn_states.DOWN_RISING_EDGE || btn_states.LEFT_RISING_EDGE || btn_states.RIGHT_RISING_EDGE) {
         if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in transmit direct async, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
         delay(50);
@@ -200,7 +200,7 @@ void AppJammer::loop(ButtonStates btn_states) {
         delay(50);
         if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in standby, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
     }

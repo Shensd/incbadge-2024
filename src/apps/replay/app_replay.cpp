@@ -13,13 +13,13 @@ void AppReplay::load_selected_sub_file(const radiohal::SubFile* subfile) {
 
     if((status = radiohal::set_config_from_preset_index(radio, subfile->preset_index, subfile->custom_preset_data)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error loading sub file configuration, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
 
     if((status = radio.setFrequency((float)subfile->frequency_hz / 1000000.0)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting radio frequency %dHz, (%d)\n", subfile->frequency_hz);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
 }
@@ -187,7 +187,7 @@ void AppReplay::loop(ButtonStates btn_states) {
     if(!do_transmit) {
         if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in standby, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
         digitalWrite(RADIO_gd0, LOW);
@@ -244,7 +244,7 @@ void AppReplay::loop1() {
     if(!radio_is_setup) {
         if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in transmit direct async, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
         transmit_timer = millis();

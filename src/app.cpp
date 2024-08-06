@@ -29,6 +29,18 @@ void AppHandler::exit_current() {
     current_app = NULL;
 }
 
+void AppHandler::exit_current_with_error(int16_t status) {
+    previous_app_closed_with_error = true;
+    previous_app_error_status = status;
+    if(current_app != NULL) {
+        previous_app_name = current_app->get_name();
+    } else {
+        previous_app_name = placeholder_null;
+    }
+
+    exit_current();
+}
+
 void AppHandler::start_app(App* app) {
     exit_current();
 
@@ -62,9 +74,45 @@ void AppHandler::draw_bouncing_cube() {
     }
 }
 
+void AppHandler::display_error_messasge() {
+    display->clearDisplay();
+
+    display->fillScreen(SSD1306_WHITE);
+    display->setTextColor(SSD1306_BLACK);
+    display->setTextSize(1);
+    display->cp437(true); 
+
+    display->setCursor(2, 2);
+    display->write("X ERROR X");
+
+    display->setCursor(2, 10);
+    display->write("The previous app");
+    display->setCursor(2, 20);
+    display->write("encountered an error");
+    display->setCursor(2, 30);
+    display->write("and closed itself.");
+
+    display->setCursor(2, 40);
+    char buffer[32];
+    display->setTextWrap(false);
+    sprintf(buffer, "[%d,%s]", previous_app_error_status, previous_app_name);
+    display->setTextWrap(true);
+    display->write(buffer);
+
+    display->setCursor(2, 50);
+    display->write("Press A to continue.");
+
+    display->display();
+}
+
 void AppHandler::loop(ButtonStates btn_states) {
     if(current_app != NULL) {
         current_app->loop(btn_states);
+        return;
+    }
+
+    if(previous_app_closed_with_error && btn_states.A_FALLING_EDGE) {
+        previous_app_closed_with_error = false;
         return;
     }
 
@@ -79,6 +127,11 @@ void AppHandler::loop(ButtonStates btn_states) {
     if(btn_states.UP_FALLING_EDGE) {
         ui_selected_app = ui_selected_app - 1;
         if(ui_selected_app < 0) ui_selected_app = num_apps - 1;
+    }
+
+    if(previous_app_closed_with_error) {
+        display_error_messasge();
+        return;
     }
 
     display->clearDisplay();

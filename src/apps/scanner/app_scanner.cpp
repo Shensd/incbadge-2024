@@ -9,22 +9,22 @@ void AppScanner::setup() {
 
     if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting OOK mode, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
     if((status = radio.setFrequency(scanner_frequency_list[frequency_index])) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting frequency, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
     if((status = radio.setRxBandwidth(rx_bw)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting rx bandwidth, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
     if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting receive direct async, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
 
@@ -62,7 +62,7 @@ void AppScanner::loop(ButtonStates btn_states) {
 
             if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
                 Serial.printf("error putting radio in standby, %d\n", status);
-                handler->exit_current();
+                handler->exit_current_with_error(status);
                 return;
             }
 
@@ -72,7 +72,7 @@ void AppScanner::loop(ButtonStates btn_states) {
 
             if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
                 Serial.printf("error setting receive direct async, %d\n", status);
-                handler->exit_current();
+                handler->exit_current_with_error(status);
                 return;
             }
 

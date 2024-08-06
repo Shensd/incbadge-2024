@@ -49,6 +49,13 @@ private:
     int16_t cube_x = SCREEN_WIDTH / 2, cube_y = SCREEN_HEIGHT / 2;
 
     void draw_bouncing_cube();
+
+    void display_error_messasge();
+
+    bool previous_app_closed_with_error = false;
+    int16_t previous_app_error_status = 0;
+    const char* placeholder_null = "NULL";
+    char const* previous_app_name = NULL;
 public:
     AppHandler(Adafruit_SSD1306 *display, CC1101 radio);
 
@@ -66,6 +73,7 @@ public:
     void start_app_by_index(uint32_t index);
 
     void exit_current();
+    void exit_current_with_error(int16_t status);
     void loop(ButtonStates btn_states);
     void loop1();
 };
