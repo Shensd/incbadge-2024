@@ -29,10 +29,11 @@ void AppReadme::loop(ButtonStates btn_states) {
         "RECORD+REPLAY: (2/2)\nDevice has no\npersistent memory!\nPower off means\nrecordings disappear!",
         "SCANNER:\nUses flipper hopping\nfrequencies.",
         "JAMMER:\nA allows frequency\nchange.\nBe careful with what\nfrequencies you jam!",
+        "MOUSE:\nUsing a second badge,\nconnect one to a PC\nand use the other\nto move the mouse!",
         "FOXHUNT:\nDirectional antenna\nsuggested!\n(not included)",
         "FOX:\nSee note about\nDEFCON fox hunting\ncompetition.",
         "USB CLI MODE:\nConnect to serial to\naccess USB cli\n(arduino serial tool\nis recommended).",
-        "PIXEL PAINTER:\nGet creative!",
+        "PAINT:\nGet creative!\nA inverts selected\npixel.\nUP+LEFT opens\ntools menu.\n",
         "FLASH MODE:\nJust reboots pico\ninto flash mode,\nfor developers.\nIf actived, power\ncycle to get back\nto main.",
         "Happy DEFCON 32!\n(you can press B to\nexit to main menu)",
     };

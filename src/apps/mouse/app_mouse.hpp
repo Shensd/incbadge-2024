@@ -5,6 +5,7 @@
 #include "radiohal.hpp"
 
 #include <Mouse.h>
+// #include <Adafruit_TinyUSB.h>
 
 namespace AppMouse_NS {
 void receive_cb(void);
@@ -12,7 +13,11 @@ void receive_cb(void);
 
 class AppMouse : public App {
 private:
+    // Adafruit_USBD_HID usb_mouse;
+
     const char* name = "MOUSE";
+
+    const uint8_t MAGIC[4] = {0xBA, 0xBA, 0x12, 0x34};
 
     bool do_receive = true;
     bool temp_do_receive = 0;
@@ -26,7 +31,7 @@ private:
     bool receive_mode_started = false;
     bool transmit_mode_started = false;
 
-    uint8_t packet_buffer[3];
+    uint8_t packet_buffer[7];
 
     uint32_t right_initial_hold = 0;
     uint32_t left_initial_hold = 0;

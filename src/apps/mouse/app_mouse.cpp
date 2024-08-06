@@ -1,42 +1,50 @@
 #include "app_mouse.hpp"
 
-AppMouse::AppMouse(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {}
+AppMouse::AppMouse(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {
+}
 
 namespace AppMouse_NS {
-    // uint8_t buffer[] = {0, 0, 0, 0};
-    // bool buffer_filled = false;
-
     bool packet_available = false;
-
-    CC1101* radio;
 }
 
 void AppMouse::setup() {
     int16_t status = 0;
 
-    AppMouse_NS::radio = &radio;
+    pinMode(RADIO_gd0, INPUT);
 
-    // Mouse.begin();
-
-    radio.reset(); 
+    if((status = radio.packetMode()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio into packet mode, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
+    }
 
     if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
-        // Mouse.end();
         Serial.printf("error setting frequency, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
 
     if((status = radio.setNodeAddress(id, 1)) != RADIOLIB_ERR_NONE) {
-        // Mouse.end();
         Serial.printf("error setting node id, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
         return;
     }
 
     if((status = radio.setCrcFiltering(true)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error enabling crc filtering, %d\n", status);
-        handler->exit_current();
+        handler->exit_current_with_error(status);
+        return;
+    }
+
+    if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error enabling ASK modulation, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
+    }
+
+    if((status = radio.setRxBandwidth(270)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting rx bandwidth, %d\n", status);
+        handler->exit_current_with_error(status);
         return;
     }
 
@@ -44,14 +52,18 @@ void AppMouse::setup() {
         radio.setPacketReceivedAction(AppMouse_NS::receive_cb);
 
         if((status = radio.startReceive()) != RADIOLIB_ERR_NONE) {
-            // Mouse.end();
             Serial.printf("error starting receive, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
     } else {
         radio.clearPacketReceivedAction();
-        radio.standby();
+
+        if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in standy mode, %d\n", status);
+            handler->exit_current_with_error(status);
+            return;
+        }
     }
 }
 
@@ -70,19 +82,23 @@ void AppMouse::loop_configuration(ButtonStates btn_states) {
         id = temp_id;
         do_receive = temp_do_receive;
 
-        radio.standby();
+        if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in standy mode, %d\n", status);
+            handler->exit_current_with_error(status);
+            return;
+        }
 
         if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
             // Mouse.end();
             Serial.printf("error setting frequency, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 
         if((status = radio.setNodeAddress(id, 1)) != RADIOLIB_ERR_NONE) {
             // Mouse.end();
             Serial.printf("error setting node id, %d\n", status);
-            handler->exit_current();
+            handler->exit_current_with_error(status);
             return;
         }
 
@@ -92,7 +108,7 @@ void AppMouse::loop_configuration(ButtonStates btn_states) {
             if((status = radio.startReceive()) != RADIOLIB_ERR_NONE) {
                 // Mouse.end();
                 Serial.printf("error starting receive, %d\n", status);
-                handler->exit_current();
+                handler->exit_current_with_error(status);
                 return;
             }
         } else {
@@ -218,7 +234,7 @@ void AppMouse::loop_configuration(ButtonStates btn_states) {
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
     display->setCursor(2, 20);
-    sprintf(buffer, "ID: %d", temp_id);
+    sprintf(buffer, "CHANNEL: %d", temp_id);
     display->write(buffer);
 
     if(current_configuration_option == 2) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
@@ -259,7 +275,11 @@ void AppMouse::loop(ButtonStates btn_states) {
     if(btn_states.A_FALLING_EDGE) {
         in_configuration_loop = true;
 
-        radio.standby();
+        if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in standy mode, %d\n", status);
+            handler->exit_current_with_error(status);
+            return;
+        }
         
         temp_frequency = frequency;
         temp_id = id;
@@ -269,51 +289,75 @@ void AppMouse::loop(ButtonStates btn_states) {
     }
 
     if(do_receive) {
-        // if(btn_states.UP) {
-        //     Mouse.move(0, -10);
-        // } else if(btn_states.DOWN) {
-        //     Mouse.move(0, 10);
-        // } else if(btn_states.LEFT) {
-        //     Mouse.move(-10, 0);
-        // } else if(btn_states.RIGHT) {
-        //     Mouse.move(10, 0);
-        // }
+        int8_t mouse_dx = 0, mouse_dy = 0;
 
         if(AppMouse_NS::packet_available) {
-            radio.readData(packet_buffer, sizeof(packet_buffer));
+            memset(packet_buffer, 0, sizeof(packet_buffer) / sizeof(packet_buffer[0]));
 
-            Serial.printf("MOVE %d, %d\n", (int8_t)packet_buffer[0], (int8_t)packet_buffer[1]);
+            status = radio.readData(packet_buffer, sizeof(packet_buffer) / sizeof(packet_buffer[0]));
+
+            if(status == RADIOLIB_ERR_NONE) {
+                // check if magic number matches
+                if(packet_buffer[0] == MAGIC[0] && packet_buffer[1] == MAGIC[1] && 
+                    packet_buffer[2] == MAGIC[2] && packet_buffer[3] == MAGIC[3]) {
+                    
+                    Serial.printf("MOVE %d, %d\n", (int8_t)packet_buffer[4], (int8_t)packet_buffer[5]);
+
+                    mouse_dx = packet_buffer[4];
+                    mouse_dy = packet_buffer[5];
+                } 
+
+                if(mouse_dx != 0 || mouse_dy != 0) {
+                    Mouse.move(mouse_dx, mouse_dy);
+                }
+            } else if(status == RADIOLIB_ERR_CRC_MISMATCH) {
+                // just ignore CRC mismatches
+            } else {
+                Serial.printf("error reading data from radio, %d\n", status);
+                handler->exit_current_with_error(status);
+                return;
+            }
 
             AppMouse_NS::packet_available = false;
 
-            radio.startReceive();
+            if((status = radio.startReceive()) != RADIOLIB_ERR_NONE) {
+                Serial.printf("error starting receive, %d\n", status);
+                handler->exit_current_with_error(status);
+                return;
+            }
         }
     } else {
         bool do_transmit = false;
 
-        uint8_t data[3] = {0, 0, 0};
+        packet_buffer[0] = MAGIC[0];
+        packet_buffer[1] = MAGIC[1];
+        packet_buffer[2] = MAGIC[2];
+        packet_buffer[3] = MAGIC[3];
+        packet_buffer[4] = 0; // mouse_dx
+        packet_buffer[5] = 0; // mouse_dy
+        packet_buffer[6] = 0;
 
-        if(btn_states.UP) {
-            data[1] = -10;
-            do_transmit = true;
-        } 
-        if(btn_states.DOWN) {
-            data[1] = 10;
-            do_transmit = true;
-        } 
         if(btn_states.LEFT) {
-            data[0] = -10;
+            packet_buffer[4] = -10;
             do_transmit = true;
         } 
         if(btn_states.RIGHT) {
-            data[0] = 10;
+            packet_buffer[4] = 10;
             do_transmit = true;
         }
+        if(btn_states.UP) {
+            packet_buffer[5] = -10;
+            do_transmit = true;
+        } 
+        if(btn_states.DOWN) {
+            packet_buffer[5] = 10;
+            do_transmit = true;
+        } 
 
         if(do_transmit) {
-            if((status =  radio.transmit(data, 3, id)) != RADIOLIB_ERR_NONE) {
+            if((status = radio.transmit(packet_buffer, sizeof(packet_buffer) / sizeof(packet_buffer[0]), id)) != RADIOLIB_ERR_NONE) {
                 Serial.printf("error transmitting, %d\n", status);
-                handler->exit_current();
+                handler->exit_current_with_error(status);
                 return;
             }
         }
@@ -325,11 +369,32 @@ void AppMouse::loop(ButtonStates btn_states) {
     display->setTextColor(SSD1306_WHITE);
     display->cp437(true);
     display->setCursor(2, 2);
-    display->write("MOUSE");
+    if(do_receive) {
+        display->write("A=settings");
+    } else {
+        // special chars are up/down/left/right glyphs
+        display->write("\x18\x19\x1A\x1B=move mouse"); 
+    }
+
+
+    char buffer[32];
 
     display->setCursor(2, 10);
-    char buffer[32];
-    sprintf(buffer, "last command: %d, %d", (int8_t)buffer[0], (int8_t)buffer[1]);
+    sprintf(buffer, "Channel: %d", id);
+    display->write(buffer);
+
+    display->setCursor(2, 20);
+    sprintf(buffer, "Mode: %s", do_receive ? "Receiver" : "Controller");
+    display->write(buffer);
+
+
+    display->setCursor(2, 30);
+    if(do_receive) {
+        sprintf(buffer, "Last cmd: %d, %d", (int8_t)packet_buffer[4], (int8_t)packet_buffer[5]);
+    } else {
+        sprintf(buffer, "Last sent: %d, %d", (int8_t)packet_buffer[4], (int8_t)packet_buffer[5]);
+    }
+    display->write(buffer);
 
     display->display();
 }

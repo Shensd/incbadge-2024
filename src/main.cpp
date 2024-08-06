@@ -4,6 +4,8 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <stdint.h>
+// #include <Adafruit_TinyUSB.h>
+#include <Mouse.h>
 
 #include "pins.hpp"
 #include "buttons.hpp"
@@ -48,6 +50,8 @@ AppHandler* handler;
 
 void setup() {
     Serial.begin(115200);
+
+    Mouse.begin();
 
     Wire.setSDA(SCREEN_SDA);
     Wire.setSCL(SCREEN_SCL);
