@@ -36,7 +36,9 @@ private:
     uint32_t transmit_index = 0;
     uint32_t transmit_timer = 0;
     bool do_transmit = false;
-    bool radio_is_setup = false;
+
+    bool should_close = false;
+    // bool loop1_has_finished = false;
 public:
     AppReplay(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler);
 

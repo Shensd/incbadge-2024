@@ -79,7 +79,13 @@ void setup() {
 
     handler->add_app(new AppIdle(radio, display, handler));
     handler->add_app(new AppReadme(radio, display, handler));
-    handler->add_app(new AppReplay(radio, display, handler));
+    
+    // replaying sub files presently doesn't work and causes other apps to also not work,
+    // I think it has to do with the loading of flipper configs into the radio, this will be
+    // reworked and added into the firmware when it is in an actual functional state.
+
+    // handler->add_app(new AppReplay(radio, display, handler));
+    
     handler->add_app(new AppRecord(radio, display, handler));
     handler->add_app(new AppScanner(radio, display, handler));
     handler->add_app(new AppJammer(radio, display, handler));
@@ -87,8 +93,8 @@ void setup() {
     // handler->add_app(new AppPOCSAG(radio, display, handler));
     handler->add_app(new AppFoxHunt(radio, display, handler));
     handler->add_app(new AppFox(radio, display, handler));
-    handler->add_app(new AppUSB(radio, display, handler));
     handler->add_app(new AppPixelPainter(radio, display, handler));
+    handler->add_app(new AppUSB(radio, display, handler));
     handler->add_app(new AppFlash(radio, display, handler));
 
     handler->start_app_by_index(0); // load idle animation

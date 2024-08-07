@@ -55,6 +55,8 @@ int16_t set_config_from_preset_index(CC1101 radio, uint8_t preset_index, const u
 
 const char* get_preset_string_from_index(uint8_t preset_index);
 
+int16_t reset_flipper_config_registers(CC1101 radio);
+
 }
 
 #endif // !RADIOHAL_HPP

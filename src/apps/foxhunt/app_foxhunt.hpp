@@ -16,7 +16,7 @@ private:
 
     float frequency = 433;
 
-    uint8_t modulation = CONFIG_ASK;
+    // uint8_t modulation = CONFIG_ASK;
 
     int last_frequency_change = 0;
 
@@ -34,6 +34,12 @@ private:
 
     long rssi_upper_bound = -20;
     long rssi_lower_bound = -110;
+
+    const uint16_t available_bandwidths[16] = {
+        58, 68, 81, 102, 116, 135, 162, 203, 232, 270, 325, 406, 464, 541, 650, 812
+    };
+    int8_t rx_bandwidth_index = 9;
+    int8_t temp_rx_bandwidth_index = 0;
 
 
     // configuration loop vars

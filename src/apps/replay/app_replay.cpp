@@ -3,13 +3,33 @@
 AppReplay::AppReplay(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {}
 
 void AppReplay::setup() {
+    int16_t status = 0;
 
-}
+    should_close = false;
+    do_transmit = false;
+
+    pinMode(RADIO_gd0, OUTPUT);
+    digitalWrite(RADIO_gd0, LOW);
+
+    if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio into standby, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
+    }
+
+    load_selected_sub_file(current_subfile);
+
+    // loop1_has_finished = false;
+}   
 
 void AppReplay::load_selected_sub_file(const radiohal::SubFile* subfile) {
     int16_t status = 0;
 
-    radio.standby();
+    if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio into standby, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
+    }
 
     if((status = radiohal::set_config_from_preset_index(radio, subfile->preset_index, subfile->custom_preset_data)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error loading sub file configuration, %d\n", status);
@@ -173,18 +193,36 @@ void AppReplay::loop(ButtonStates btn_states) {
     if(btn_states.A_FALLING_EDGE) {
         in_configuration_loop = true;
 
-        radio.standby();
+        if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio into standby, %d\n", status);
+            handler->exit_current_with_error(status);
+            return;
+        }
 
         temp_sub_file_index = sub_file_index;
 
         return;
     }
 
-    do_transmit = btn_states.UP;
+    // do_transmit = btn_states.UP;
 
     // transmit_once = btn_states.DOWN_FALLING_EDGE;
 
-    if(!do_transmit) {
+    if(btn_states.UP_RISING_EDGE) {
+        if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in transmit direct async, %d\n", status);
+            handler->exit_current_with_error(status);
+            return;
+        }
+
+        pinMode(RADIO_gd0, OUTPUT);
+        digitalWrite(RADIO_gd0, LOW);
+
+        do_transmit = true;
+    }
+    if(btn_states.UP_FALLING_EDGE) {
+        do_transmit = false;
+
         if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in standby, %d\n", status);
             handler->exit_current_with_error(status);
@@ -192,6 +230,23 @@ void AppReplay::loop(ButtonStates btn_states) {
         }
         digitalWrite(RADIO_gd0, LOW);
     }
+
+    // if(!btn_states.UP) {
+    //     if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+    //         Serial.printf("error putting radio in standby, %d\n", status);
+    //         handler->exit_current_with_error(status);
+    //         return;
+    //     }
+    //     digitalWrite(RADIO_gd0, LOW);
+    // } else {
+    //     if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
+    //         Serial.printf("error putting radio in transmit direct async, %d\n", status);
+    //         handler->exit_current_with_error(status);
+    //         return;
+    //     }
+
+    //     do_transmit = true;
+    // }
 
     display->clearDisplay();
 
@@ -236,40 +291,41 @@ void AppReplay::loop(ButtonStates btn_states) {
 void AppReplay::loop1() {
     int16_t status = 0;
 
-    if(!do_transmit) {
-        transmit_index = 0;
-        radio_is_setup = false;
-        return;
-    }
-    if(!radio_is_setup) {
-        if((status = radio.transmitDirectAsync()) != RADIOLIB_ERR_NONE) {
-            Serial.printf("error putting radio in transmit direct async, %d\n", status);
-            handler->exit_current_with_error(status);
-            return;
-        }
-        transmit_timer = millis();
-        transmit_index = 0;
-        radio_is_setup = true;
-    }
+    while(!should_close) {
 
-    if(millis() < transmit_timer + current_subfile->timings[transmit_index]) {
-        transmit_timer = millis();
-        transmit_index++;
-
-        if(transmit_index > current_subfile->num_timings) {
-            transmit_index = 0;
+        if(!do_transmit) {
+            continue;
         }
 
-        digitalWrite(RADIO_gd0, transmit_index < 0 ? LOW : HIGH);
+        for(int i = 0; i < current_subfile->num_timings; i++) {
+            // if(!do_transmit || should_close) break;
+
+            digitalWrite(RADIO_gd0, current_subfile->timings[i] > 0 ? HIGH : LOW);
+            delayMicroseconds(abs(current_subfile->timings[i]));
+        }
+        digitalWrite(RADIO_gd0, LOW);
     }
+
+    // loop1_has_finished = true;
 }
 
 void AppReplay::close() {
     int16_t status = 0;
+
+    should_close = true;
+    do_transmit = false;
+    
+    // while(!loop1_has_finished) {}
     
     digitalWrite(RADIO_gd0, LOW);
-    
+
+    pinMode(RADIO_gd0, INPUT);
+
     if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
         Serial.printf("error putting radio in standby, %d\n", status);
+    }
+
+    if((status = radio.packetMode()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio in packet mode, %d", status);
     }
 }

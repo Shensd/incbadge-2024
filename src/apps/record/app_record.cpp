@@ -1,6 +1,11 @@
 #include "app_record.hpp"
 
-AppRecord::AppRecord(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {}
+AppRecord::AppRecord(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {
+    for(int i = 0; i < APPRECORD_NUM_TIMINGS_SLOTS; i++) {
+        timings_index[i] = 0;
+        // memset(timings[i], 0, sizeof(timings[0]));
+    }
+}
 
 void AppRecord::setup() {
     int16_t status = 0;
@@ -9,6 +14,16 @@ void AppRecord::setup() {
         previous_rssi_readings[i] = rssi_lower_bound;
     }
 
+    if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error putting radio into standby, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
+    }
+    if((status = radio.setPromiscuousMode(true)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting promiscuous mode, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
+    }
     if((status = radio.setOOK(use_ook)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting OOK mode, %d\n", status);
         handler->exit_current_with_error(status);
@@ -30,6 +45,7 @@ void AppRecord::setup() {
         return;
     }
    
+    should_close = false;
 }
 
 
@@ -45,6 +61,11 @@ void AppRecord::loop_configuration(ButtonStates btn_states) {
         rx_bandwidth_index = temp_rx_bandwidth_index;
         fsk_deviation = temp_fsk_deviation;
 
+        if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio into standby, %d\n", status);
+            handler->exit_current_with_error(status);
+            return;
+        }
         if((status = radio.setOOK(use_ook)) != RADIOLIB_ERR_NONE) {
             Serial.printf("error setting OOK mode, %d\n", status);
             handler->exit_current_with_error(status);
@@ -181,10 +202,10 @@ void AppRecord::loop_configuration(ButtonStates btn_states) {
 
         break;
     case 3: // bandwidth 
-        if(do_right_small_step) temp_rx_bandwidth_index++;
-        else if(do_left_small_step) temp_rx_bandwidth_index--;
+        if(do_right_small_step || do_right_medium_step) temp_rx_bandwidth_index++;
+        else if(do_left_small_step || do_left_medium_step) temp_rx_bandwidth_index--;
 
-        if(temp_rx_bandwidth_index < 0) temp_rx_bandwidth_index = sizeof(available_bandwidths) / sizeof(available_bandwidths[0]);
+        if(temp_rx_bandwidth_index < 0) temp_rx_bandwidth_index = (sizeof(available_bandwidths) / sizeof(available_bandwidths[0])) - 1;
         if(temp_rx_bandwidth_index >= sizeof(available_bandwidths) / sizeof(available_bandwidths[0])) temp_rx_bandwidth_index = 0;
 
         break;
@@ -302,7 +323,11 @@ void AppRecord::loop(ButtonStates btn_states) {
     if(btn_states.A_FALLING_EDGE) {
         in_configuration_loop = true;
 
-        radio.standby();
+        if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio into standby, %d\n", status);
+            handler->exit_current_with_error(status);
+            return;
+        }
 
         temp_use_ook = use_ook;
         temp_frequency = frequency;
@@ -313,16 +338,20 @@ void AppRecord::loop(ButtonStates btn_states) {
     }
 
     if(btn_states.DOWN_RISING_EDGE) {
-        if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+        do_record = false;
+        do_replay = false;
+
+        delay(100);
+
+        if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in standby, %d\n", status);
             handler->exit_current_with_error(status);
             return;
         }
 
         pinMode(RADIO_gd0, INPUT);
-        tick_timer = micros();
-        last_bit_time = micros();
-        last_bit_state = HIGH;
+        // last_bit_time = micros();
+        // last_bit_state = HIGH;
         timings_index[timings_slot] = 0;
 
         if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
@@ -332,10 +361,16 @@ void AppRecord::loop(ButtonStates btn_states) {
         }
 
         do_record = true;
+
     } else if(btn_states.UP_RISING_EDGE) {
+        do_record = false;
+        do_replay = false;
+
+        delay(100);
+
         dump_recording_over_serial();
 
-        if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+        if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error putting radio in standby, %d\n", status);
             handler->exit_current_with_error(status);
             return;
@@ -411,7 +446,7 @@ void AppRecord::loop(ButtonStates btn_states) {
     uint8_t rssi_reading_array_len = (sizeof(previous_rssi_readings) / sizeof(previous_rssi_readings[0]));
 
     if(do_record) {
-        float rssi = radiohal::get_RSSI(radio); 
+        float rssi = radiohal::get_RSSI(radio);
 
         if(millis() > last_rssi_reading + rssi_reading_frequency_ms) {
             float adjusted_rssi = rssi;
@@ -456,29 +491,37 @@ void AppRecord::loop(ButtonStates btn_states) {
 }
 
 void AppRecord::loop1() {
-    if(do_record) {
-        if(timings_index[timings_slot] >= sizeof(timings[timings_slot]) / sizeof(timings[timings_slot][0])) {
-            return;
+    while(!should_close) {
+        if(in_configuration_loop) continue;
+        long beginning_last_reading = micros();
+        bool last_reading = HIGH;
+        while(do_record) {
+            if(!do_record || should_close) break;
+
+            if(timings_index[timings_slot] >= sizeof(timings[timings_slot]) / sizeof(timings[timings_slot][0])) {
+                break;
+            }
+
+            bool reading = digitalRead(RADIO_gd0);
+
+            if(reading == last_reading) continue;
+
+            timings[timings_slot][timings_index[timings_slot]] = (last_reading == LOW ? -1 : 1) * (micros() - beginning_last_reading);
+
+            beginning_last_reading = micros();
+            last_reading = reading;
+            timings_index[timings_slot]++;
         }
 
-        bool reading = digitalRead(RADIO_gd0);
+        if(do_replay) {
+            for(int i = 0; i < timings_index[timings_slot]; i++) {
+                if(!do_replay || should_close) break;
 
-        if(reading == last_bit_state) return;
+                digitalWrite(RADIO_gd0, timings[timings_slot][i] > 0 ? HIGH : LOW);
 
-        timings[timings_slot][timings_index[timings_slot]] = (last_bit_state == 0 ? -1 : 1) * (micros() - last_bit_time);
-
-        last_bit_state = reading;
-        last_bit_time = micros();
-        timings_index[timings_slot]++;
-    }
-    if(do_replay) {
-        for(int i = 0; i < timings_index[timings_slot]; i++) {
-            if(!do_replay) break;
-
-            if(timings[timings_slot][i] < 0) digitalWrite(RADIO_gd0, LOW);
-            else digitalWrite(RADIO_gd0, HIGH);
-
-            delayMicroseconds(abs(timings[timings_slot][i]));
+                delayMicroseconds(abs(timings[timings_slot][i]));
+            }
+            digitalWrite(RADIO_gd0, LOW);
         }
     }
 }
@@ -488,6 +531,8 @@ void AppRecord::close() {
 
     do_record = false;
     do_replay = false;
+
+    should_close = true;
 
     if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
         Serial.printf("error putting radio in standby, %d\n", status);

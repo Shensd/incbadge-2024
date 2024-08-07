@@ -16,7 +16,7 @@ private:
     uint32_t right_hold_tick = 0;
     uint32_t left_hold_tick = 0;
     bool in_configuration_loop = false;
-    int8_t configuration_options = 4;
+    int8_t configuration_options = 1;
     int8_t current_configuration_option = 0;
 
     float temp_frequency = 0;

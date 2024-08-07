@@ -18,7 +18,7 @@ void AppPixelPainter::setup() {
 
 void AppPixelPainter::settings_loop(ButtonStates btn_states) {
 
-    if(btn_states.A_RISING_EDGE) {
+    if(btn_states.A_FALLING_EDGE) {
         if(settings_option_erase_canvas) {
             for(int y = 0; y < HEIGHT/pixel_size; y++){
                 for (int x = 0; x < WIDTH/pixel_size; x++){
@@ -41,23 +41,23 @@ void AppPixelPainter::settings_loop(ButtonStates btn_states) {
         return;
     }
 
-    if(btn_states.B_RISING_EDGE) {
+    if(btn_states.B_FALLING_EDGE) {
         settings_option_invert_canvas = false;
         settings_option_erase_canvas = false;
         in_settings = false;
         return;
     }
 
-    if(btn_states.UP_RISING_EDGE) {
+    if(btn_states.UP_FALLING_EDGE) {
         settings_selected_option++;
-    } else if(btn_states.DOWN_RISING_EDGE) {
+    } else if(btn_states.DOWN_FALLING_EDGE) {
         settings_selected_option--;
     }
 
     if(settings_selected_option < 0) settings_selected_option = num_settings_options - 1;
     if(settings_selected_option >= num_settings_options) settings_selected_option = 0;
 
-    bool do_action = btn_states.LEFT_FALLING_EDGE ||  btn_states.RIGHT_FALLING_EDGE;
+    bool do_action = btn_states.LEFT_RISING_EDGE ||  btn_states.RIGHT_RISING_EDGE;
 
     switch(settings_selected_option) {
     case 0: // invert canvas
@@ -77,7 +77,7 @@ void AppPixelPainter::settings_loop(ButtonStates btn_states) {
     display->cp437(true);
     display->setCursor(2, 2);
 
-    display->write("a=save b=back");
+    display->write("A=save B=cancel");
 
     if(settings_selected_option == 0) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
@@ -98,14 +98,13 @@ void AppPixelPainter::settings_loop(ButtonStates btn_states) {
 }
 
 void AppPixelPainter::loop(ButtonStates btn_states) {
-    // Exit on B Press
-    if(btn_states.B_FALLING_EDGE) {
-        handler->exit_current();
+    if(in_settings) {
+        settings_loop(btn_states);
         return;
     }
 
-    if(in_settings) {
-        settings_loop(btn_states);
+    if(btn_states.B_FALLING_EDGE) {
+        handler->exit_current();
         return;
     }
 

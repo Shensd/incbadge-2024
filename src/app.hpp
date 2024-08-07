@@ -8,6 +8,7 @@
 #include <SPI.h>
 
 #include "buttons.hpp"
+#include "radiohal.hpp"
 
 class AppHandler;
 

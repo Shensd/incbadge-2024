@@ -25,7 +25,8 @@ void AppFox::setup() {
         handler->exit_current_with_error(status);
         return;
     }
-    delay(100);
+
+    transmit_timer = millis();
 }
 
 void AppFox::loop_configuration(ButtonStates btn_states) {
@@ -178,8 +179,9 @@ void AppFox::loop_configuration(ButtonStates btn_states) {
 
         break;
     case 3: // ASK or FSK
-        if(btn_states.LEFT_RISING_EDGE) temp_modulation = CONFIG_FSK;
-        if(btn_states.RIGHT_RISING_EDGE) temp_modulation = CONFIG_ASK;
+        if(do_right_small_step || do_left_small_step || do_right_medium_step || do_left_medium_step) {
+            temp_modulation = temp_modulation == CONFIG_FSK ? CONFIG_ASK : CONFIG_FSK;
+        }
 
         break;
     default:    
@@ -200,28 +202,28 @@ void AppFox::loop_configuration(ButtonStates btn_states) {
     if(current_configuration_option == 0) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
-    sprintf(text_buffer, "FREQ %.3f", temp_frequency);
+    sprintf(text_buffer, "FREQ: %.3f", temp_frequency);
     display->setCursor(2, 10);
     display->write(text_buffer);
 
     if(current_configuration_option == 1) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
-    sprintf(text_buffer, "TX GAP %d", temp_transmit_delay_ms / 1000);
+    sprintf(text_buffer, "TX GAP: %d", temp_transmit_delay_ms / 1000);
     display->setCursor(2, 20);
     display->write(text_buffer);
 
     if(current_configuration_option == 2) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
-    sprintf(text_buffer, "TX DURATION %d", temp_transmit_duration_ms / 1000);
+    sprintf(text_buffer, "TX DURATION: %d", temp_transmit_duration_ms / 1000);
     display->setCursor(2, 30);
     display->write(text_buffer);
 
     if(current_configuration_option == 3) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
-    sprintf(text_buffer, "MODULATION %s", temp_modulation == CONFIG_ASK ? "ASK" : "FSK");
+    sprintf(text_buffer, "MOD: %s", temp_modulation == CONFIG_ASK ? "ASK" : "FSK");
     display->setCursor(2, 40);
     display->write(text_buffer);
 
@@ -279,13 +281,11 @@ void AppFox::loop(ButtonStates btn_states) {
     display->setCursor(2, 20);
     sprintf(text_buffer, "TX duration: %ds", transmit_duration_ms / 1000);
     display->write(text_buffer);
-    // display->write("This app transmits while open!");
 
     display->display();
 }
 
 void AppFox::loop1() {
-
     if(millis() < transmit_timer + transmit_delay_ms) {
         return;
     }

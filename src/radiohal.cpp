@@ -114,33 +114,35 @@ float adjust_frequency(float frequency) {
 
 int16_t set_config_from_preset_index(CC1101 radio, uint8_t preset_index,
                                      const uint8_t* custom_preset_data) {
+    int16_t status = 0;
+
     switch (preset_index) {
         case CONFIG_PRESET_AM270:
-            if (config_FuriHalSubGhzPresetOok270Async(radio) !=
+            if ((status = config_FuriHalSubGhzPresetOok270Async(radio)) !=
                 RADIOLIB_ERR_NONE) {
                 Serial.println("error configuring radio to AM270 config");
-                return RADIOLIB_ERR_NONE;
+                return status;
             }
             break;
         case CONFIG_PRESET_AM650:
-            if (config_FuriHalSubGhzPresetOok650Async(radio) !=
+            if ((status = config_FuriHalSubGhzPresetOok650Async(radio)) !=
                 RADIOLIB_ERR_NONE) {
                 Serial.println("error configuring radio to AM650 config");
-                return RADIOLIB_ERR_NONE;
+                return status;
             }
             break;
         case CONFIG_PRESET_FM238:
-            if (config_FuriHalSubGhzPreset2FSKDev238Async(radio) !=
+            if ((status = config_FuriHalSubGhzPreset2FSKDev238Async(radio)) !=
                 RADIOLIB_ERR_NONE) {
                 Serial.println("error configuring radio to FM238 config");
-                return RADIOLIB_ERR_NONE;
+                return status;
             }
             break;
         case CONFIG_PRESET_FM476:
-            if (config_FuriHalSubGhzPreset2FSKDev476Async(radio) !=
+            if ((status = config_FuriHalSubGhzPreset2FSKDev476Async(radio)) !=
                 RADIOLIB_ERR_NONE) {
                 Serial.println("error configuring radio to FM476 config");
-                return RADIOLIB_ERR_NONE;
+                return status;
             }
             break;
         case CONFIG_PRESET_CUSTOM:
@@ -150,16 +152,16 @@ int16_t set_config_from_preset_index(CC1101 radio, uint8_t preset_index,
                     "preset_data pointer");
                 return RADIOLIB_ERR_UNKNOWN;
             }
-            if (load_config(radio, custom_preset_data) != RADIOLIB_ERR_NONE) {
+            if ((status =  load_config(radio, custom_preset_data)) != RADIOLIB_ERR_NONE) {
                 Serial.println("error loading custom config (uh oh)");
-                return RADIOLIB_ERR_NONE;
+                return status;
             }
             break;
         default:
             break;
     }
 
-    return RADIOLIB_ERR_UNKNOWN;
+    return RADIOLIB_ERR_NONE;
 }
 
 const char* get_preset_string_from_index(uint8_t preset_index) {
@@ -183,4 +185,39 @@ const char* get_preset_string_from_index(uint8_t preset_index) {
 
     return NULL;
 }
+
+int16_t reset_flipper_config_registers(CC1101 radio) {
+    uint8_t default_register_map[] = { // nsa backdoor
+        2, 46,
+        3, 7,
+        8, 5,
+        11, 15,
+        20, 248,
+        19, 2,
+        18, 2,
+        17, 131,
+        16, 247,
+        24, 20,
+        25, 118,
+        29, 145,
+        28, 64,
+        27, 3,
+        32, 248,
+        34, 16,
+        33, 86,
+    };
+
+    uint16_t status = 0;
+
+    for(int i = 0; i < sizeof(default_register_map) / sizeof(default_register_map[0]); i+=2) {
+        status = radio.SPIsetRegValue(default_register_map[i], default_register_map[i + 1]);
+
+        if (status != RADIOLIB_ERR_NONE) {
+            return status;
+        }
+    }
+
+    return RADIOLIB_ERR_NONE;
+}
+
 }  // namespace radiohal

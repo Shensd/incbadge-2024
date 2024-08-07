@@ -10,10 +10,6 @@ This is a CC1101 based badge designed for DEFCON 32. It features several applica
 
 The badge ships with quite a few applications by default, here are the highlights:
 
-### PLAY SUB
-
-PLAY SUB allows flipper RAW sub files to be replayed by the badge. The sub files need to be converted and compiled into the badge image, as there is no external storage to dynamically load them.
-
 ### RECORD+REPLAY
 
 The badge is able to record signals with a number of adjustable parameters and the replay with the same or different parameters. Signals recorded from the badge can be dumped over serial by connecting the badge to a computer. 

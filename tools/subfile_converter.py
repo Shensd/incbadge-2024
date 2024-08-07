@@ -32,15 +32,15 @@ def main(argc, argv):
     MAX_TIMINGS = 4096
 
     preset_map = {
-        "FuriHalSubGhzPresetOok270Async": "CONFIG_MOD_AM270",
-        "FuriHalSubGhzPresetOok650Async": "CONFIG_MOD_AM650",
-        "FuriHalSubGhzPreset2FSKDev238Async": "CONFIG_MOD_FM238",
-        "FuriHalSubGhzPreset2FSKDev476Async": "CONFIG_MOD_FM476",
-        "FuriHalSubGhzPresetCustom": "CONFIG_MOD_CUSTOM",
+        "FuriHalSubGhzPresetOok270Async": "radiohal::CONFIG_PRESET_AM270",
+        "FuriHalSubGhzPresetOok650Async": "radiohal::CONFIG_PRESET_AM650",
+        "FuriHalSubGhzPreset2FSKDev238Async": "radiohal::CONFIG_PRESET_FM238",
+        "FuriHalSubGhzPreset2FSKDev476Async": "radiohal::CONFIG_PRESET_FM476",
+        "FuriHalSubGhzPresetCustom": "radiohal::CONFIG_PRESET_CUSTOM",
     }
 
     protcol_map = {
-        "RAW": "CONFIG_PROTOCOL_RAW",
+        "RAW": "radiohal::CONFIG_PROTOCOL_RAW",
     }
 
     if frequency == None:
@@ -75,7 +75,7 @@ def main(argc, argv):
     print(f"        .name = \"{name}\",")
     print(f"        .frequency_hz = {frequency},")
     preset_index = preset_map[preset]
-    print(f"        .custom_preset_index = {preset_index},")
+    print(f"        .preset_index = {preset_index},")
     protocol_index = protcol_map[protocol]
     print(f"        .custom_protocol_index = {protocol_index},")
     if custom_preset_data != None:

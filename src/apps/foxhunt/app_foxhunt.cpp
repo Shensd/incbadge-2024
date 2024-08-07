@@ -7,23 +7,26 @@ void AppFoxHunt::setup() {
 
     int16_t status = 0;
 
-    if(modulation == CONFIG_ASK) {
-        if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
-            Serial.printf("error setting OOK, %d\n", status);
-            handler->exit_current_with_error(status);
-            return;
-        }
+    if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting OOK, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
     }
-    if(modulation == CONFIG_FSK) {
-        if((status = radio.setOOK(false)) != RADIOLIB_ERR_NONE) {
-            Serial.printf("error setting ASK (setOOK(false)), %d\n", status);
-            handler->exit_current_with_error(status);
-            return;
-        }
+
+    if((status = radio.setPromiscuousMode(true)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting promiscuous mode, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
     }
 
     if((status = radio.setFrequency(frequency)) != RADIOLIB_ERR_NONE) {
         Serial.printf("error setting frequency, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
+    }
+
+    if((status = radio.setRxBandwidth(available_bandwidths[rx_bandwidth_index])) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error setting rx bandwidth, %d\n", status);
         handler->exit_current_with_error(status);
         return;
     }
@@ -40,6 +43,8 @@ void AppFoxHunt::setup() {
     for(uint8_t i = 0; i < rssi_reading_array_len; i++) {
         previous_rssi_readings[i] = rssi_lower_bound;
     }
+
+    rp2040.idleOtherCore();
 }
 
 void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
@@ -52,7 +57,7 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
         frequency = temp_frequency;
         rssi_upper_bound = temp_rssi_upper_bound;
         rssi_lower_bound = temp_rssi_lower_bound;
-        modulation = temp_modulation;
+        rx_bandwidth_index = temp_rx_bandwidth_index;
 
         radio.standby();
 
@@ -62,19 +67,10 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
             return;
         }
 
-        if(modulation == CONFIG_ASK) {
-            if((status = radio.setOOK(true)) != RADIOLIB_ERR_NONE) {
-                Serial.printf("error setting OOK, %d\n", status);
-                handler->exit_current_with_error(status);
-                return;
-            }
-        }
-        if(modulation == CONFIG_FSK) {
-            if((status = radio.setOOK(false)) != RADIOLIB_ERR_NONE) {
-                Serial.printf("error setting ASK (setOOK(false)), %d\n", status);
-                handler->exit_current_with_error(status);
-                return;
-            }
+        if((status = radio.setRxBandwidth(available_bandwidths[rx_bandwidth_index])) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error setting rx bandwidth, %d\n", status);
+            handler->exit_current_with_error(status);
+            return;
         }
 
         if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
@@ -183,9 +179,17 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
         else if(do_left_small_step) temp_rssi_upper_bound -= 1;
 
         break;
-    case 3: // ASK or FSK
-        if(btn_states.LEFT_RISING_EDGE) temp_modulation = CONFIG_FSK;
-        if(btn_states.RIGHT_RISING_EDGE) temp_modulation = CONFIG_ASK;
+    // case 3: // ASK or FSK
+    //     if(btn_states.LEFT_RISING_EDGE) temp_modulation = CONFIG_FSK;
+    //     if(btn_states.RIGHT_RISING_EDGE) temp_modulation = CONFIG_ASK;
+
+    //     break;
+    case 3: // bandwidth 
+        if(do_right_small_step || do_right_medium_step) temp_rx_bandwidth_index++;
+        else if(do_left_small_step || do_left_medium_step) temp_rx_bandwidth_index--;
+
+        if(temp_rx_bandwidth_index < 0) temp_rx_bandwidth_index = (sizeof(available_bandwidths) / sizeof(available_bandwidths[0])) - 1;
+        if(temp_rx_bandwidth_index >= sizeof(available_bandwidths) / sizeof(available_bandwidths[0])) temp_rx_bandwidth_index = 0;
 
         break;
     default:    
@@ -206,29 +210,31 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
     if(current_configuration_option == 0) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
-    sprintf(text_buffer, "FREQ %.3f", temp_frequency);
+    sprintf(text_buffer, "FREQ: %.3f", temp_frequency);
     display->setCursor(2, 10);
     display->write(text_buffer);
 
     if(current_configuration_option == 1) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
-    sprintf(text_buffer, "RSSI LOW %d", temp_rssi_lower_bound);
+    sprintf(text_buffer, "RSSI MIN: %d", temp_rssi_lower_bound);
     display->setCursor(2, 20);
     display->write(text_buffer);
 
     if(current_configuration_option == 2) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
-    sprintf(text_buffer, "RSSI HI %d", temp_rssi_upper_bound);
+    sprintf(text_buffer, "RSSI MAX: %d", temp_rssi_upper_bound);
     display->setCursor(2, 30);
     display->write(text_buffer);
 
     if(current_configuration_option == 3) display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     else display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
-    sprintf(text_buffer, "MODULATION %s", temp_modulation == CONFIG_ASK ? "ASK" : "FSK");
+    // sprintf(text_buffer, "MOD: %s", temp_modulation == CONFIG_ASK ? "ASK" : "FSK");
     display->setCursor(2, 40);
+    // display->write(text_buffer);
+    sprintf(text_buffer, "BW: %d", available_bandwidths[temp_rx_bandwidth_index]);
     display->write(text_buffer);
 
     display->display();
@@ -253,6 +259,7 @@ void AppFoxHunt::loop(ButtonStates btn_states) {
         temp_frequency = frequency;
         temp_rssi_upper_bound = rssi_upper_bound;
         temp_rssi_lower_bound = rssi_lower_bound;
+        temp_rx_bandwidth_index = rx_bandwidth_index;
 
         return;
     }
@@ -281,7 +288,7 @@ void AppFoxHunt::loop(ButtonStates btn_states) {
 
     char text_buffer[32];
     // uint8_t rawRssi = radio.SPIreadRegister(RADIOLIB_CC1101_REG_RSSI);
-    sprintf(text_buffer, "%s, RSSI %d", modulation == CONFIG_ASK ? "ASK" : "FSK", (int) rssi);
+    sprintf(text_buffer, "BW: %d, RSSI: %d", available_bandwidths[rx_bandwidth_index], (int) rssi);
     // sprintf(text_buffer, "RSSI: %d", rawRssi);
     display->setCursor(2, 2);
     display->write(text_buffer);
@@ -312,11 +319,13 @@ void AppFoxHunt::loop(ButtonStates btn_states) {
 }
 
 void AppFoxHunt::loop1() {
-
+    // second core idle in this application
 }
 
 void AppFoxHunt::close() {
     int16_t status = 0;
+
+    rp2040.resumeOtherCore();
 
     if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
         Serial.printf("error putting radio in standby, %d\n", status);

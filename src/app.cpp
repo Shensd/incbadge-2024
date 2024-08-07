@@ -7,6 +7,11 @@ void AppHandler::exit_current() {
 
     current_app->close();
 
+    // delay(100);
+
+    // prevent apps from leaking this behavior
+    display->invertDisplay(false);
+
     // make sure radio is always powered down when an app is closed,
     // since it's the most power hungry componenet
     int16_t status = 0;
@@ -25,6 +30,14 @@ void AppHandler::exit_current() {
     }
 
     rp2040.idleOtherCore();
+
+    // this was added pretty late in the project, should have done it sooner 
+    radio.reset();
+
+    if((status = radio.begin()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error resetting radio between apps, %d\n", status);
+        return;
+    }
 
     current_app = NULL;
 }

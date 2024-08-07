@@ -54,6 +54,13 @@ void AppScanner::loop(ButtonStates btn_states) {
         step_frequency_index();
     }
 
+    if(btn_states.LEFT_FALLING_EDGE) {
+        rssi_thresh--;
+    }
+    if(btn_states.RIGHT_FALLING_EDGE) {
+        rssi_thresh++;
+    }
+
     if(currently_scanning) {
         if(millis() > scanner_timer + time_at_frequency_ms) {
             activity_on_frequency = false;
@@ -85,13 +92,20 @@ void AppScanner::loop(ButtonStates btn_states) {
     display->clearDisplay();
 
     display->setTextSize(1);
-    display->setTextColor(SSD1306_WHITE);
+
+    if(activity_on_frequency)  {
+        display->setTextColor(SSD1306_BLACK);
+        display->fillScreen(SSD1306_WHITE);
+    } else {
+        display->setTextColor(SSD1306_WHITE);
+    }
+
     display->cp437(true);
     display->setCursor(2, 2);
     if(currently_scanning) {
-        display->write("UP=stop");
+        display->write("\x18=stop \x1b\x1a=thresh");
     } else {
-        display->write("UP=start");
+        display->write("\x18=start \x1b\x1a=thresh");
     }
 
     display->setCursor(2, 10);
@@ -124,8 +138,6 @@ void AppScanner::loop(ButtonStates btn_states) {
         display->setCursor(2, 50);
         display->write("Caught activity!");
     }
-
-    display->invertDisplay(activity_on_frequency);
 
     display->display();
 }

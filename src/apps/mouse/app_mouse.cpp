@@ -300,9 +300,6 @@ void AppMouse::loop(ButtonStates btn_states) {
                 // check if magic number matches
                 if(packet_buffer[0] == MAGIC[0] && packet_buffer[1] == MAGIC[1] && 
                     packet_buffer[2] == MAGIC[2] && packet_buffer[3] == MAGIC[3]) {
-                    
-                    Serial.printf("MOVE %d, %d\n", (int8_t)packet_buffer[4], (int8_t)packet_buffer[5]);
-
                     mouse_dx = packet_buffer[4];
                     mouse_dy = packet_buffer[5];
                 } 
@@ -311,6 +308,7 @@ void AppMouse::loop(ButtonStates btn_states) {
                     Mouse.move(mouse_dx, mouse_dy);
                 }
             } else if(status == RADIOLIB_ERR_CRC_MISMATCH) {
+                memset(packet_buffer, 0, sizeof(packet_buffer) / sizeof(packet_buffer[0]));
                 // just ignore CRC mismatches
             } else {
                 Serial.printf("error reading data from radio, %d\n", status);

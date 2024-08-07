@@ -30,7 +30,7 @@ private:
 
     uint64_t tick_timer = 0;
     uint64_t last_bit_time = 0;
-    bool last_bit_state = 0;
+    bool last_bit_state = HIGH;
 
     float previous_rssi_readings[128];
     uint32_t rssi_reading_frequency_ms = 50;
@@ -44,6 +44,8 @@ private:
     bool do_record = false;
 
     bool do_replay = false;
+
+    bool should_close = false;
 
     #define APPRECORD_NUM_TIMINGS_SLOTS (3)
     int8_t timings_slot = 0;

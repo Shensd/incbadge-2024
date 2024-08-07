@@ -24,7 +24,7 @@ void AppReadme::loop(ButtonStates btn_states) {
         "Here are now app\nspecific notes:",
         "IDLE:\nPressing any button\nexits you to main.",
         "README:\nYou are here now!\n",
-        "PLAY SUB:\nSelect and play\na few built-in sub\nfiles. Pressing A\nlets you select\na file to play.",
+        // "PLAY SUB:\nSelect and play\na few built-in sub\nfiles. Pressing A\nlets you select\na file to play.",
         "RECORD+REPLAY: (1/2)\nRecords and replays\nsignals. A brings up settings.\nUP also prints\ncurrent recording to\nserial.",
         "RECORD+REPLAY: (2/2)\nDevice has no\npersistent memory!\nPower off means\nrecordings disappear!",
         "SCANNER:\nUses flipper hopping\nfrequencies.",
@@ -32,8 +32,8 @@ void AppReadme::loop(ButtonStates btn_states) {
         "MOUSE:\nUsing a second badge,\nconnect one to a PC\nand use the other\nto move the mouse!",
         "FOXHUNT:\nDirectional antenna\nsuggested!\n(not included)",
         "FOX:\nSee note about\nDEFCON fox hunting\ncompetition.",
-        "USB CLI MODE:\nConnect to serial to\naccess USB cli\n(arduino serial tool\nis recommended).",
         "PAINT:\nGet creative!\nA inverts selected\npixel.\nUP+LEFT opens\ntools menu.\n",
+        "USB CLI MODE:\nConnect to serial to\naccess USB cli\n(arduino serial tool\nis recommended).",
         "FLASH MODE:\nJust reboots pico\ninto flash mode,\nfor developers.\nIf actived, power\ncycle to get back\nto main.",
         "Happy DEFCON 32!\n(you can press B to\nexit to main menu)",
     };
