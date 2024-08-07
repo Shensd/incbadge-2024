@@ -28,7 +28,7 @@ class AppIdle : public App {
     AppIdle_NS::ball balls[32];
 
     // matrix effect
-    AppIdle_NS::matrix_line matrix_lines[SCREEN_WIDTH / 8] = {0};
+    AppIdle_NS::matrix_line matrix_lines[SCREEN_WIDTH / 8];
     int matrix_last_update = 0;
 
     // pong animation

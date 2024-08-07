@@ -15,12 +15,13 @@ private:
     // float frequency = 0;
     // float temp_frequency = 0;
 
-    radiohal::SubFile const* current_subfile = &AppReplay_NS::DEFAULT_SUB_FILES[0];
+    // radiohal::SubFile const* current_subfile = &AppReplay_NS::DEFAULT_SUB_FILES[0];
 
-    uint8_t sub_file_index = 0;
+    volatile uint8_t sub_file_index = 0;
     int8_t temp_sub_file_index = 0;
 
-    void load_selected_sub_file(const radiohal::SubFile* subfile);
+    // void load_selected_sub_file(const radiohal::SubFile* subfile);
+    void load_selected_sub_file(int8_t subfile_index);
 
     uint32_t right_initial_hold = 0;
     uint32_t left_initial_hold = 0;

@@ -1,20 +1,20 @@
 #include "app_record.hpp"
 
 AppRecord::AppRecord(CC1101 radio, Adafruit_SSD1306* display, AppHandler* handler) : App(radio, display, handler) {
-    for(int i = 0; i < APPRECORD_NUM_TIMINGS_SLOTS; i++) {
-        timings_index[i] = 0;
-        // memset(timings[i], 0, sizeof(timings[0]));
-    }
+    // for(int i = 0; i < APPRECORD_NUM_TIMINGS_SLOTS; i++) {
+    //     timings_slot_current_index[i] = 0;
+    //     // memset(timings[i], 0, sizeof(timings[0]));
+    // }
 }
 
 void AppRecord::setup() {
     int16_t status = 0;
 
-    for(int i = 0; i < sizeof(previous_rssi_readings) / sizeof(previous_rssi_readings[0]); i++) {
+    for(int i = 0; i < APPRECORD_MAX_RSSI_READINGS; i++) {
         previous_rssi_readings[i] = rssi_lower_bound;
     }
 
-    if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+    if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
         Serial.printf("error putting radio into standby, %d\n", status);
         handler->exit_current_with_error(status);
         return;
@@ -44,6 +44,15 @@ void AppRecord::setup() {
         handler->exit_current_with_error(status);
         return;
     }
+    // despite promiscuous being enabled this call is required or else
+    // rssi will get stuck
+    if((status = radio.disableSyncWordFiltering()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error disabling sync word filtering, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
+    }
+
+    pinMode(RADIO_gd0, INPUT);
    
     should_close = false;
 }
@@ -177,11 +186,13 @@ void AppRecord::loop_configuration(ButtonStates btn_states) {
             break;
         case radiohal::CONFIG_PRESET_FM238:
             temp_use_ook = false;
-            temp_fsk_deviation = 238;
+            temp_fsk_deviation = 2.38;
+            temp_rx_bandwidth_index = 9;
             break;
         case radiohal::CONFIG_PRESET_FM476:
             temp_use_ook = false;
-            temp_fsk_deviation = 476;
+            temp_fsk_deviation = 47.6;
+            temp_rx_bandwidth_index = 9;
             break;
         }
 
@@ -297,14 +308,29 @@ void AppRecord::dump_recording_over_serial() {
         break;
     }
     Serial.print("Protocol: RAW");
-    for(int i = 0; i < timings_index[timings_slot]; i++) {
+    for(int i = 0; i < timings_index; i++) {
         if(i % 512 == 0) {
             Serial.print("\nRAW_Data: ");
         }
-        Serial.printf("%d ", timings[timings_slot][i]);
+        Serial.printf("%d ", timings[i]);
     }
 
     Serial.println("");
+}
+
+namespace AppRecord_NS {
+
+volatile bool did_fall = false;
+volatile bool did_rise = false;
+
+void gd0_cb_falling(void) {
+    did_fall = true;
+}
+
+void gd0_cb_rising(void) {
+    did_rise = true;
+}
+
 }
 
 void AppRecord::loop(ButtonStates btn_states) {
@@ -350,9 +376,12 @@ void AppRecord::loop(ButtonStates btn_states) {
         }
 
         pinMode(RADIO_gd0, INPUT);
+
+        radio.setGdo0Action(AppRecord_NS::gd0_cb_falling, FALLING);
+
         // last_bit_time = micros();
         // last_bit_state = HIGH;
-        timings_index[timings_slot] = 0;
+        timings_index = 0;
 
         if((status = radio.receiveDirectAsync()) != RADIOLIB_ERR_NONE) {
             Serial.printf("error setting receive direct async, %d\n", status);
@@ -375,6 +404,8 @@ void AppRecord::loop(ButtonStates btn_states) {
             handler->exit_current_with_error(status);
             return;
         }
+
+        radio.clearGdo0Action();
 
         pinMode(RADIO_gd0, OUTPUT);
         digitalWrite(RADIO_gd0, LOW);
@@ -402,15 +433,15 @@ void AppRecord::loop(ButtonStates btn_states) {
             return;
         }
 
-        if(btn_states.RIGHT_FALLING_EDGE) {
-            timings_slot++;
-        }
-        if(btn_states.LEFT_FALLING_EDGE) {
-            timings_slot--;
-        }
+        // if(btn_states.RIGHT_FALLING_EDGE) {
+        //     timings_slot++;
+        // }
+        // if(btn_states.LEFT_FALLING_EDGE) {
+        //     timings_slot--;
+        // }
 
-        if(timings_slot < 0) timings_slot = APPRECORD_NUM_TIMINGS_SLOTS - 1;
-        if(timings_slot >= APPRECORD_NUM_TIMINGS_SLOTS) timings_slot = 0;
+        // if(timings_slot < 0) timings_slot = APPRECORD_NUM_TIMINGS_SLOTS - 1;
+        // if(timings_slot >= APPRECORD_NUM_TIMINGS_SLOTS) timings_slot = 0;
     }
 
     display->clearDisplay();
@@ -429,45 +460,41 @@ void AppRecord::loop(ButtonStates btn_states) {
 
     display->setCursor(2, 10);
     char buffer[32];
-    sprintf(buffer, "Timings: %d", timings_index[timings_slot]);
+    sprintf(buffer, "Timings: %d", timings_index);
     display->write(buffer);
+
+    // display->setCursor(2, 20);
+    // sprintf(buffer, "Save slot: %d", timings_slot + 1);
+    // display->write(buffer);
 
     display->setCursor(2, 20);
-    sprintf(buffer, "Save slot: %d", timings_slot + 1);
-    display->write(buffer);
-
-    display->setCursor(2, 30);
     if(do_record) {
         display->write("Recording!");
     } else if(do_replay) {
         display->write("Transmitting!");
     }
 
-    uint8_t rssi_reading_array_len = (sizeof(previous_rssi_readings) / sizeof(previous_rssi_readings[0]));
-
     if(do_record) {
         float rssi = radiohal::get_RSSI(radio);
 
         if(millis() > last_rssi_reading + rssi_reading_frequency_ms) {
-            float adjusted_rssi = rssi;
-
-            if(rssi < rssi_lower_bound) adjusted_rssi = rssi_lower_bound;
-            if(rssi > rssi_upper_bound) adjusted_rssi = rssi_upper_bound;
+            if(rssi < rssi_lower_bound) rssi = rssi_lower_bound;
+            if(rssi > rssi_upper_bound) rssi = rssi_upper_bound;
 
             previous_rssi_readings[rssi_reading_index] = rssi;
-            rssi_reading_index = (rssi_reading_index + 1) % rssi_reading_array_len;
+            rssi_reading_index = (rssi_reading_index + 1) % APPRECORD_MAX_RSSI_READINGS;
 
             last_rssi_reading = millis();
         }
     }
 
-    for(uint8_t i = 0; i < rssi_reading_array_len; i++) {
+    for(uint8_t i = 0; i < APPRECORD_MAX_RSSI_READINGS; i++) {
         uint32_t height = map((long) previous_rssi_readings[i], rssi_lower_bound, rssi_upper_bound, 0, 32);
 
         display->fillRect(
-            i * (SCREEN_WIDTH / rssi_reading_array_len),
+            i * (SCREEN_WIDTH / APPRECORD_MAX_RSSI_READINGS),
             SCREEN_HEIGHT - height,
-            (SCREEN_WIDTH / rssi_reading_array_len),
+            (SCREEN_WIDTH / APPRECORD_MAX_RSSI_READINGS),
             SCREEN_HEIGHT,
             SSD1306_WHITE
         );
@@ -475,7 +502,7 @@ void AppRecord::loop(ButtonStates btn_states) {
 
     if(do_record) {
         display->fillRect(
-            rssi_reading_index * (SCREEN_WIDTH / rssi_reading_array_len),
+            rssi_reading_index * (SCREEN_WIDTH / APPRECORD_MAX_RSSI_READINGS),
             SCREEN_HEIGHT - 32,
             1,
             SCREEN_HEIGHT,
@@ -491,35 +518,46 @@ void AppRecord::loop(ButtonStates btn_states) {
 }
 
 void AppRecord::loop1() {
+
     while(!should_close) {
+
         if(in_configuration_loop) continue;
+
         long beginning_last_reading = micros();
-        bool last_reading = HIGH;
         while(do_record) {
+
             if(!do_record || should_close) break;
 
-            if(timings_index[timings_slot] >= sizeof(timings[timings_slot]) / sizeof(timings[timings_slot][0])) {
-                break;
+            if(timings_index >= APPRECORD_MAX_TIMINGS) {
+                continue;
             }
 
-            bool reading = digitalRead(RADIO_gd0);
-
-            if(reading == last_reading) continue;
-
-            timings[timings_slot][timings_index[timings_slot]] = (last_reading == LOW ? -1 : 1) * (micros() - beginning_last_reading);
-
-            beginning_last_reading = micros();
-            last_reading = reading;
-            timings_index[timings_slot]++;
+            if(AppRecord_NS::did_fall) {
+                timings[timings_index] = (micros() - beginning_last_reading);
+                beginning_last_reading = micros();
+                timings_index++;
+                AppRecord_NS::did_fall = false;
+                radio.setGdo0Action(AppRecord_NS::gd0_cb_rising, RISING);
+                continue;
+            }
+            if(AppRecord_NS::did_rise) {
+                timings[timings_index] = -1 * (micros() - beginning_last_reading);
+                beginning_last_reading = micros();
+                timings_index++;
+                AppRecord_NS::did_rise = false;
+                radio.setGdo0Action(AppRecord_NS::gd0_cb_falling, FALLING);
+                continue;
+            }
         }
 
         if(do_replay) {
-            for(int i = 0; i < timings_index[timings_slot]; i++) {
+            digitalWrite(RADIO_gd0, LOW);
+            for(int i = 0; i < timings_index; i++) {
                 if(!do_replay || should_close) break;
 
-                digitalWrite(RADIO_gd0, timings[timings_slot][i] > 0 ? HIGH : LOW);
+                digitalWrite(RADIO_gd0, timings[i] > 0 ? HIGH : LOW);
 
-                delayMicroseconds(abs(timings[timings_slot][i]));
+                delayMicroseconds(abs(timings[i]));
             }
             digitalWrite(RADIO_gd0, LOW);
         }
@@ -534,7 +572,9 @@ void AppRecord::close() {
 
     should_close = true;
 
-    if((status = radio.finishTransmit()) != RADIOLIB_ERR_NONE) {
+    if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
         Serial.printf("error putting radio in standby, %d\n", status);
     }
+
+    radio.clearGdo0Action();
 }

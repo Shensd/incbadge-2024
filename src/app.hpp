@@ -35,8 +35,8 @@ public:
 
 class AppHandler {
 private:
-    CC1101 radio;
     Adafruit_SSD1306 *display;
+    CC1101 radio;
     App* apps[MAX_APPS];
     uint32_t num_apps = 0;
 

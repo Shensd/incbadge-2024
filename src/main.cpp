@@ -7,6 +7,8 @@
 // #include <Adafruit_TinyUSB.h>
 #include <Mouse.h>
 
+#include <memory.h>
+
 #include "pins.hpp"
 #include "buttons.hpp"
 #include "app.hpp"
@@ -81,16 +83,14 @@ void setup() {
     handler->add_app(new AppReadme(radio, display, handler));
     
     // replaying sub files presently doesn't work and causes other apps to also not work,
-    // I think it has to do with the loading of flipper configs into the radio, this will be
-    // reworked and added into the firmware when it is in an actual functional state.
-
+    // there is definitely a memory usage bug somewhere but I cannot find it for the life
+    // of me
     // handler->add_app(new AppReplay(radio, display, handler));
     
     handler->add_app(new AppRecord(radio, display, handler));
     handler->add_app(new AppScanner(radio, display, handler));
     handler->add_app(new AppJammer(radio, display, handler));
     handler->add_app(new AppMouse(radio, display, handler));
-    // handler->add_app(new AppPOCSAG(radio, display, handler));
     handler->add_app(new AppFoxHunt(radio, display, handler));
     handler->add_app(new AppFox(radio, display, handler));
     handler->add_app(new AppPixelPainter(radio, display, handler));

@@ -21,7 +21,7 @@ private:
 
     float temp_frequency = 0;
 
-    bool do_jamming = false;
+    volatile bool do_jamming = false;
 
     bool jammer_status = false;
 

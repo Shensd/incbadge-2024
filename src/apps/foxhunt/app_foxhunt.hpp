@@ -27,8 +27,10 @@ private:
 
     bool require_frequency_confirmation = false;
 
-    float previous_rssi_readings[128];
-    uint32_t rssi_reading_frequency_ms = 50;
+    #define APPFOXHUNT_MAX_RSSI_READINGS 128
+
+    float previous_rssi_readings[APPFOXHUNT_MAX_RSSI_READINGS];
+    uint32_t rssi_reading_frequency_ms = 10;
     uint32_t last_rssi_reading = 0;
     uint8_t rssi_reading_index = 0;
 

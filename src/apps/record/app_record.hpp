@@ -5,6 +5,13 @@
 
 #include "radiohal.hpp"
 
+namespace AppRecord_NS {
+
+void gd0_cb_falling(void);
+void gd0_cb_rising(void);
+
+}
+
 class AppRecord : public App {
 private:
     const char* name = "RECORD+REPLAY";
@@ -32,7 +39,9 @@ private:
     uint64_t last_bit_time = 0;
     bool last_bit_state = HIGH;
 
-    float previous_rssi_readings[128];
+    #define APPRECORD_MAX_RSSI_READINGS 128
+
+    float previous_rssi_readings[APPRECORD_MAX_RSSI_READINGS];
     uint32_t rssi_reading_frequency_ms = 50;
     uint32_t last_rssi_reading = 0;
     uint8_t rssi_reading_index = 0;
@@ -47,12 +56,14 @@ private:
 
     bool should_close = false;
 
-    #define APPRECORD_NUM_TIMINGS_SLOTS (3)
-    int8_t timings_slot = 0;
-
-    int32_t timings[APPRECORD_NUM_TIMINGS_SLOTS][8192];
-    uint32_t timings_index[APPRECORD_NUM_TIMINGS_SLOTS] = {0, 0, 0}; // make sure to update this if you add more save slots
-    long last_timing_micros = 0;
+    // #define APPRECORD_NUM_TIMINGS_SLOTS 3
+    #define APPRECORD_MAX_TIMINGS 8192
+    // int8_t timings_slot = 0;
+    // int32_t timings[APPRECORD_NUM_TIMINGS_SLOTS][APPRECORD_MAX_TIMINGS];
+    // uint32_t timings_slot_current_index[APPRECORD_NUM_TIMINGS_SLOTS] = {0, 0, 0}; // make sure to update this if you add more save slots
+    int32_t timings[APPRECORD_MAX_TIMINGS];
+    uint32_t timings_index = 0;
+    // long last_timing_micros = 0;
 
     uint32_t right_initial_hold = 0;
     uint32_t left_initial_hold = 0;

@@ -36,6 +36,15 @@ void AppFoxHunt::setup() {
         handler->exit_current_with_error(status);
         return;
     }
+
+    // despite promiscuous being enabled this call is required or else
+    // rssi will get stuck
+    if((status = radio.disableSyncWordFiltering()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error disabling sync word filtering, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
+    }
+
     delay(100);
 
     // clear out rssi reading array
@@ -241,6 +250,8 @@ void AppFoxHunt::loop_configuration(ButtonStates btn_states) {
 }
 
 void AppFoxHunt::loop(ButtonStates btn_states) {
+    int16_t status = 0;
+
     if(in_configuration_loop) {
         loop_configuration(btn_states);
         return;
@@ -254,7 +265,11 @@ void AppFoxHunt::loop(ButtonStates btn_states) {
     if(btn_states.A_FALLING_EDGE) {
         in_configuration_loop = true;
 
-        radio.standby();
+        if((status = radio.standby()) != RADIOLIB_ERR_NONE) {
+            Serial.printf("error putting radio in standby, %d\n", status);
+            handler->exit_current_with_error(status);
+            return;
+        }
 
         temp_frequency = frequency;
         temp_rssi_upper_bound = rssi_upper_bound;
@@ -272,16 +287,14 @@ void AppFoxHunt::loop(ButtonStates btn_states) {
 
     float rssi = radiohal::get_RSSI(radio); 
 
-    uint8_t rssi_reading_array_len = (sizeof(previous_rssi_readings) / sizeof(previous_rssi_readings[0]));
-
     if(millis() > last_rssi_reading + rssi_reading_frequency_ms) {
         float adjusted_rssi = rssi;
 
-        if(rssi < rssi_lower_bound) adjusted_rssi = rssi_lower_bound;
-        if(rssi > rssi_upper_bound) adjusted_rssi = rssi_upper_bound;
+        if(adjusted_rssi < rssi_lower_bound) adjusted_rssi = rssi_lower_bound;
+        if(adjusted_rssi > rssi_upper_bound) adjusted_rssi = rssi_upper_bound;
 
-        previous_rssi_readings[rssi_reading_index] = rssi;
-        rssi_reading_index = (rssi_reading_index + 1) % rssi_reading_array_len;
+        previous_rssi_readings[rssi_reading_index] = adjusted_rssi;
+        rssi_reading_index = (rssi_reading_index + 1) % APPFOXHUNT_MAX_RSSI_READINGS;
 
         last_rssi_reading = millis();
     }
@@ -303,13 +316,13 @@ void AppFoxHunt::loop(ButtonStates btn_states) {
     display->setCursor(2, 64 - 8);
     display->write(text_buffer);
 
-    for(uint8_t i = 0; i < rssi_reading_array_len; i++) {
+    for(uint8_t i = 0; i < APPFOXHUNT_MAX_RSSI_READINGS; i++) {
         uint32_t height = map((long) previous_rssi_readings[i], rssi_lower_bound, rssi_upper_bound, 0, 48);
 
         display->fillRect(
-            i * (SCREEN_WIDTH / rssi_reading_array_len),
+            i * (SCREEN_WIDTH / APPFOXHUNT_MAX_RSSI_READINGS),
             SCREEN_HEIGHT - height,
-            (SCREEN_WIDTH / rssi_reading_array_len),
+            (SCREEN_WIDTH / APPFOXHUNT_MAX_RSSI_READINGS),
             SCREEN_HEIGHT,
             SSD1306_WHITE
         );

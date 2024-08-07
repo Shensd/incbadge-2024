@@ -27,6 +27,18 @@ void AppScanner::setup() {
         handler->exit_current_with_error(status);
         return;
     }
+    if((status = radio.setPromiscuousMode(true)) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error enabling promiscuous mode, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
+    }
+    // despite promiscuous being enabled this call is required or else
+    // rssi will get stuck
+    if((status = radio.disableSyncWordFiltering()) != RADIOLIB_ERR_NONE) {
+        Serial.printf("error disabling sync word filtering, %d\n", status);
+        handler->exit_current_with_error(status);
+        return;
+    }
 
     currently_scanning = false;
 }
