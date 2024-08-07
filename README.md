@@ -40,7 +40,7 @@ I will upload hardware files after the conference when I get the project cleaned
 
 ### Will there be more firmware updates after the conference?
 
-*Maybe*, at present I'm, a little burnt out on the project after it has consumed all my free-time for the past two weeks. I still have more ideas of applications I want to implement (namely duckyscript support, multiplayer games like pong, additional sub file support, and a POCSAG decoder) but I am out of time and a little out of brain power at this point, so we will see if/when I pick the project back up. 
+*Maybe*, at present I'm a little burnt out on the project after it has consumed all my free-time for the past two weeks. I still have more ideas of applications I want to implement (namely playing flipper sub files, duckyscript support, multiplayer games like pong, and a POCSAG decoder) but I am out of time and a little out of brain power at this point, so we will see if/when I pick the project back up. 
 
 ### One of the applications crashed and showed me an error screen, what can I do about that?
 
